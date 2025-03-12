@@ -45,8 +45,9 @@ class AnomalyDetection:
         if len(anomaly_message.trajectories) == 0:
             return None
         
-        # Forward camera geo location (unset value does not need special treatment)
-        anomaly_message.camera_location.CopyFrom(sae_msg.frame.camera_location)
+        # Forward camera geo location
+        if sae_msg.HasField('camera_location'):
+            anomaly_message.camera_location.CopyFrom(sae_msg.frame.camera_location)
 
         return self._create_output(anomaly_message)
     
