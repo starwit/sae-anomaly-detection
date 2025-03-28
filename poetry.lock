@@ -557,7 +557,7 @@ dev = ["meson-python (>=0.13.1,<0.17.0)", "pybind11 (>=2.13.2,!=2.13.3)", "setup
 
 [[package]]
 name = "movementpredictor"
-version = "0.1.4"
+version = "0.1.6"
 description = "position forecaster to find unlikely movements for movement clustering"
 optional = false
 python-versions = "^3.10"
@@ -579,14 +579,14 @@ scipy = "^1.14.0"
 shapely = "^2.0.5"
 torch = "^2.3.1"
 tqdm = "^4.66.4"
-visionapi = {git = "https://github.com/starwit/vision-api.git", tag = "3.1.0", subdirectory = "python/visionapi"}
+visionapi = {git = "https://github.com/starwit/vision-api.git", tag = "3.2.0", subdirectory = "python/visionapi"}
 visionlib = {git = "https://github.com/starwit/vision-lib.git", tag = "0.11.2", subdirectory = "python"}
 
 [package.source]
 type = "git"
 url = "https://github.com/starwit/movement-predictor.git"
-reference = "0.1.4"
-resolved_reference = "1018ef2154ffd0883ad0ee3ee903ae401fc17bc3"
+reference = "0.1.6"
+resolved_reference = "51ce67a0d3a8d46f6fae15101dcc0a2aadf1cf25"
 
 [[package]]
 name = "mpmath"
@@ -1906,7 +1906,7 @@ files = [
 
 [[package]]
 name = "visionapi"
-version = "3.1.0"
+version = "3.2.0"
 description = ""
 optional = false
 python-versions = "^3.10"
@@ -1920,8 +1920,8 @@ protobuf = "^4.23.0"
 [package.source]
 type = "git"
 url = "https://github.com/starwit/vision-api.git"
-reference = "3.1.0"
-resolved_reference = "3fea102e63c8a4474e058fb47d9f60dbe128a08d"
+reference = "3.2.0"
+resolved_reference = "cb43b088ceb93060822cb71f5f4b3c1888baddb2"
 subdirectory = "python/visionapi"
 
 [[package]]
@@ -1953,4 +1953,4 @@ subdirectory = "python"
 [metadata]
 lock-version = "2.1"
 python-versions = "^3.10"
-content-hash = "5ccf834fafb4d628d77333bd9a69fc0574255927263af5b426e60b5df17380a6"
+content-hash = "4f6fb6142aead92a0cdf0ebe3e4af3c3a2692e1c10c47e23413797ef07e7846d"

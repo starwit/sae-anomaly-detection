@@ -67,7 +67,9 @@ class Detector():
     def examine_tracks_for_anomalies(self, tracks, frames) -> AnomalyMessage:
         if len(tracks) != 0:
             with SuppressOutput():      # suppress tqdm progress bar
-                dataloader = makeTorchDataLoader(tracks, self._config.model.background_path)
+                diff = frames[1].timestamp_utc_ms - frames[0].timestamp_utc_ms
+                frame_rate = 1000/diff
+                dataloader = makeTorchDataLoader(tracks, self._config.model.background_path, frame_rate)
                 outputs_with_stats = inference_with_stats(self.model, dataloader)
                 anomalies = get_meaningful_unlikely_samples(outputs_with_stats, self._parameters["anomaly_threshold"] 
                                                             if self._config.model.anomaly_threshold_override is None else self._config.model.anomaly_threshold_override)
