@@ -5,7 +5,7 @@ import ast
 from typing import List
 import torch
 
-from movementpredictor import DataFilterer, makeTorchDataLoader, CNN, inference_with_stats, get_meaningful_unlikely_samples, InferenceResult
+from movementpredictor import DataFilterer, makeTorchDataLoader, inference_with_stats, get_meaningful_unlikely_samples, InferenceResult, model_architectures
 from visionapi.anomaly_pb2 import AnomalyMessage, Point, Trajectory
 
 from anomalydetection.config import AnomalyDetectionConfig
@@ -36,7 +36,13 @@ class Detector():
         self._config = CONFIG
         self._parameters = ModelInfoCollector(CONFIG).model_parameters
         self._device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-        self.model = CNN().to(self._device)
+
+        ModelArchitecture = getattr(model_architectures, CONFIG.model.model_name, None)
+        if ModelArchitecture is None:
+            log.error(f"{CONFIG.model.model_name} is not a known model architecture.")
+            exit(1)
+
+        self.model = ModelArchitecture().to(self._device)
 
         try:
             weights = torch.load(self._config.model.weights_path, map_location=torch.device(self._device))
@@ -102,8 +108,8 @@ class Detector():
 
     def _map_anomaly(self, total_anomalies: List[InferenceResult], anomaly_trajectory) -> Trajectory:
         trajectory = Trajectory()
-        trajectory.object_id = bytes.fromhex(anomaly_trajectory[0].get_uuid())
-        trajectory.class_id = anomaly_trajectory[0].get_class_id()
+        trajectory.object_id = bytes.fromhex(anomaly_trajectory[0].uuid)
+        trajectory.class_id = anomaly_trajectory[0].class_id
 
         anomaly_trigger_ts = [a.timestamp for a in total_anomalies if a.obj_id == trajectory.object_id]
 
@@ -111,14 +117,14 @@ class Detector():
             trajectory_point = trajectory.trajectory_points.add()
 
             center_point = Point()
-            center_point.x = track.get_center()[0] 
-            center_point.y = track.get_center()[1]
+            center_point.x = track.center[0] 
+            center_point.y = track.center[1]
 
             trajectory_point.detection_center.CopyFrom(center_point)
-            if track.get_capture_ts() in anomaly_trigger_ts:
+            if track.capture_ts in anomaly_trigger_ts:
                 trajectory_point.anomaly_trigger = True
             else:
                 trajectory_point.anomaly_trigger = False
-            trajectory_point.timestamp_utc_ms = track.get_capture_ts()
+            trajectory_point.timestamp_utc_ms = track.capture_ts
 
         return trajectory

@@ -15,6 +15,7 @@ class RedisConfig(BaseModel):
 
 class ModelConfig(BaseModel):
     anomaly_threshold_override: Optional[float] = None
+    model_name: str = "CNN_symmetric_prob"
     parameters_path: Path = Path("model/parameters.json")
     weights_path: Path = Path("model/model_weights.pth")
     background_path: Path = Path("model/frame.pth")

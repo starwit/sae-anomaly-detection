@@ -1,5 +1,5 @@
 import logging
-from movementpredictor import TrackedObjectPosition, TrackingDataManager
+from movementpredictor import TrackingDataManager
 
 
 class TrackCollector:
@@ -28,7 +28,7 @@ class TrackCollector:
 
         self.frames = self.frames[-5:]
         timestamps = [frame.timestamp_utc_ms for frame in self.frames]
-        self.tracks = [track for track in self.tracks if track.get_capture_ts() in timestamps]
+        self.tracks = [track for track in self.tracks if track.capture_ts in timestamps]
 
         return track_list, frame_list
 
