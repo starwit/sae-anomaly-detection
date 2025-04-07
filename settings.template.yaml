@@ -12,7 +12,6 @@ redisOut:
 filtering: True
 model:
   anomaly_threshold_override:           # only for testing:  remove if not testing     
-  model_name: CNN_symmetric_prob        # name model architecture, current models: "CNN_symmetric_prob", "CNN_asymmetric_prob"  
   parameters_path: model/parameters.json
   weights_path: model/model_weights.pth
   background_path: model/frame.pth
