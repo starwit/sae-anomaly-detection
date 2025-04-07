@@ -48,7 +48,7 @@ class AnomalyDetection:
             return None
         
         # Forward camera geo location
-        if sae_msg.HasField('camera_location'):
+        if sae_msg.frame.HasField('camera_location'):
             anomaly_message.camera_location.CopyFrom(sae_msg.frame.camera_location)
 
         return self._create_output(anomaly_message)
