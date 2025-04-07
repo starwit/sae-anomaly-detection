@@ -37,9 +37,9 @@ class Detector():
         self._parameters = ModelInfoCollector(CONFIG).model_parameters
         self._device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
-        ModelArchitecture = getattr(model_architectures, CONFIG.model.model_name, None)
+        ModelArchitecture = getattr(model_architectures, self._parameters["model_name"], None)
         if ModelArchitecture is None:
-            log.error(f"{CONFIG.model.model_name} is not a known model architecture.")
+            log.error(f"{self._parameters["model_name"]} is not a known model architecture.")
             exit(1)
 
         self.model = ModelArchitecture().to(self._device)
