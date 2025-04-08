@@ -39,7 +39,7 @@ class Detector():
 
         ModelArchitecture = getattr(model_architectures, self._parameters["model_name"], None)
         if ModelArchitecture is None:
-            log.error(f"{self._parameters["model_name"]} is not a known model architecture.")
+            log.error(self._parameters["model_name"] + " is not a known model architecture.")
             exit(1)
 
         self.model = ModelArchitecture().to(self._device)
