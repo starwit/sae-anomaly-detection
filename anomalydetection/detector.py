@@ -63,10 +63,15 @@ class Detector():
         if len(tracks) != 0:
             log.info(f"num single tracks before filtering: {len(tracks)}")
             if self._config.filtering:
-                tracks = DataFilterer().apply_filtering(tracks)
-                log.info(f"num trajectories after filtering: {len(tracks)}")
+                with SuppressOutput():
+                    tracks = DataFilterer().apply_filtering(tracks)
+                num_tracks = 0 
+                for tr in tracks.values():
+                    num_tracks += len(tr)
+                log.info(f"num tracks after filtering: {num_tracks}, within {len(tracks)} trajectories")
             else:
-                tracks = DataFilterer().only_smoothing(tracks)
+                with SuppressOutput():
+                    tracks = DataFilterer().only_smoothing(tracks)
                 log.info(f"TESTING WITHOUT FILTERING")
         return tracks
     
