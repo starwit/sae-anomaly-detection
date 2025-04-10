@@ -1,13 +1,32 @@
-imageCredentials:
-  registry: docker.internal.starwit-infra.de
-  username: docker
-  password: #password to set
+# This section is used verbatim as the settings.yaml for the anomaly-post-processing service (see settings.template.yaml for options)
 config:
   redisIn:
     stream_id: stream1
     host: valkey-primary
     port: 6379
+    stream_prefix: objecttracker
   redisOut:
     stream_id: stream1
     host: valkey-primary
     port: 6379
+    stream_prefix: anomalydetection
+  filtering: True
+  model:
+    parameters_path: model/parameters.json
+    weights_path: model/model_weights.pth
+    background_path: model/frame.pth
+  prometheus_port: 8000
+
+# The tag of the model weights image to load
+weights:
+  imageTag: "tag"
+
+# If this is not set or empty, a default pull secret is created with the credentials from .pullSecret 
+# (and then used), otherwise it is assumed that the secrets exist
+existingPullSecret: ""
+
+# if .existingPullSecret is not set, this is used to create the default secret, otherwise it will be ignored
+pullSecret:
+  registry: docker.internal.starwit-infra.de
+  username: docker
+  password: "" # password to set

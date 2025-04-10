@@ -20,11 +20,15 @@ spec:
         {{- include "selectorLabels" $ | nindent 8 }}
         app.kubernetes.io/component: {{ include "fullname" $ }}
     spec:
-      imagePullSecrets:
-        - name: internal-docker-registry
       serviceAccountName: {{ include "serviceAccountName" $ }}
       securityContext:
         {{- toYaml $.Values.podSecurityContext | nindent 8 }}
+      initContainers:
+        - name: install-model-weights
+          image: docker.internal.starwit-infra.de/sae-anomaly-detection-weights:{{ .Values.weights.imageTag }}
+          volumeMounts:
+            - name: model-weights
+              mountPath: /weights_target
       containers:
         - name: {{ include "fullname" $ }}
           securityContext:
@@ -38,10 +42,14 @@ spec:
             - name: config
               mountPath: /code/settings.yaml
               subPath: settings.yaml
+            - name: model-weights
+              mountPath: /code/model
       volumes:
         - name: config
           configMap:
             name: sae-anomaly-detection-config
+        - name: model-weights
+          emptyDir: {}
       {{- with $.Values.nodeSelector }}
       nodeSelector:
         {{- toYaml . | nindent 8 }}
