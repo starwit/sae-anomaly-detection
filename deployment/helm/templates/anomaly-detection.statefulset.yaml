@@ -35,6 +35,11 @@ spec:
             {{- toYaml $.Values.securityContext | nindent 12 }}
           image: "{{ $imageRepo }}:{{ include "imageTag" $ }}"
           imagePullPolicy: IfNotPresent
+          {{- if .Values.useGpu }}
+          resources:
+            limits:
+              nvidia.com/gpu: 1
+          {{- end }}
           ports:
             - name: prometheus
               containerPort: 8000
@@ -44,6 +49,9 @@ spec:
               subPath: settings.yaml
             - name: model-weights
               mountPath: /code/model
+      {{- if .Values.useGpu }}
+      runtimeClassName: nvidia
+      {{- end }}
       volumes:
         - name: config
           configMap:

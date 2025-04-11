@@ -17,6 +17,9 @@ config:
     background_path: model/frame.pth
   prometheus_port: 8000
 
+# When set to true the runtimeClassName is set to "nvidia" and a GPU resource is requested
+useGpu: false
+
 # The tag of the model weights image to load
 weights:
   imageTag: "tag"

@@ -6,6 +6,10 @@ once init has completed.
 
 ## How to build
 Move weight files into `weights` then run `make build push TAG=image_tag` (for tag naming see below).
+The necessary weight files are as follows (names can be changed in settings, see `settings.template.yaml`):
+- `model_weight.pth`
+- `parameters.json`
+- `frame.pth`
 
 ## Usage
 Set up the container as an init container and mount the target volume at `/weights_target`.
