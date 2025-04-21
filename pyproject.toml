@@ -9,14 +9,14 @@ readme = "README.md"
 
 [tool.poetry.dependencies]
 python = "^3.10"
-pydantic = "^2.10.6"
+pydantic = "^2.11.3"
 torch = "^2.6.0"
 numpy = "^1.26.4"
 visionapi = { git = "https://github.com/starwit/vision-api.git", subdirectory = "python/visionapi", tag = "3.2.0" }
 visionlib = { git = "https://github.com/starwit/vision-lib.git", subdirectory = "python", tag = "0.11.2" }
 movementpredictor = { git = "https://github.com/starwit/movement-predictor.git", tag = "0.2.5" }
 redis = "^5.0.0"
-pydantic-settings = "^2.8.1"
+pydantic-settings = "^2.9.1"
 prometheus-client = "0.21.1"
 opencv-python = "^4.11.0.86"
 tqdm = "^4.66.4"
