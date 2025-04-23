@@ -1,15 +1,28 @@
 name: anomaly
 
 services:
+
+  weights-container:
+    image: ${PRIVATE_IMAGE_REGISTRY}/sae-anomaly-detection-weights:${ANOMALY_DETECTION_WEIGHTS_TAG}
+    volumes:
+      - anomaly-model:/weights_target
+
   sae-anomaly-detection:
     image: ${PRIVATE_IMAGE_REGISTRY}/sae-anomaly-detection:${ANOMALY_DETECTION_VERSION}
     volumes:
       - ./sae-anomaly-detection/sae-anomaly-detection.settings.yaml:/code/settings.yaml
+      - anomaly-model:/code/model
+    depends_on:
+      weights-container:
+        condition: service_completed_successfully
 
   anomaly-post-processor:
     image: ${PRIVATE_IMAGE_REGISTRY}/anomaly-post-processing:${ANOMALY_POST_PROCESSING_VERSION}
     volumes:
       - ./anomaly-post-processing/anomaly-post-processing.settings.yaml:/code/settings.yaml
+
+volumes:
+  anomaly-model:
 
 networks:
   default:
