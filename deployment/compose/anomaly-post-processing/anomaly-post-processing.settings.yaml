@@ -1,5 +1,16 @@
-log_level: INFO
-redis:
+log_level: DEBUG
+minio: null                                 # MinIO settings for anomaly output (disabled if not defined)
+redis_input:                                # Redis settings for anomaly input (mandatory)
+  host: redis
+  port: 6379
+  stream_ids: 
+    - stream1
+  stream_prefix: anomalydetection
+raw_anomalies: False                        # If True, raw anomaly data (frames, metadata) will be added to all outputs
+redis_output:                               # Redis settings for anomaly output (disabled if not defined)
   host: redis
   port: 6379
   stream_id: stream1
+  stream_prefix: reportingaicockpit
+local_output: null                          # Local file output settings (disabled if not defined)
+prometheus_port: 8000

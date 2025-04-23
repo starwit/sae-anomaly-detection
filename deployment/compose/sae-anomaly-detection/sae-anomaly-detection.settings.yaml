@@ -1,6 +1,18 @@
-log_level: INFO
-redis:
+log_level: DEBUG
+redisIn:
   host: redis
   port: 6379
   stream_id: stream1
-path_to_model_config: anomalydetection/parameters_test.json
+  stream_prefix: objecttracker
+redisOut:
+  host: redis
+  port: 6379
+  stream_id: stream1
+  stream_prefix: anomalydetection
+filtering: True
+model:
+  anomaly_threshold_override:           # only for testing:  remove if not testing     
+  parameters_path: model/parameters.json
+  weights_path: model/model_weights.pth
+  background_path: model/frame.pth
+prometheus_port: 8000
