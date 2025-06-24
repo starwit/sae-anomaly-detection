@@ -14,5 +14,4 @@ model:
   anomaly_threshold_override:           # only for testing:  remove if not testing     
   parameters_path: model/parameters.json
   weights_path: model/model_weights.pth
-  background_path: model/frame.pth
 prometheus_port: 8000

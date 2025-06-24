@@ -17,7 +17,6 @@ class ModelConfig(BaseModel):
     anomaly_threshold_override: Optional[float] = None
     parameters_path: Path = Path("model/parameters.json")
     weights_path: Path = Path("model/model_weights.pth")
-    background_path: Path = Path("model/frame.pth")
 
 class AnomalyDetectionConfig(BaseSettings):
     log_level: LogLevel = LogLevel.INFO

@@ -10,7 +10,7 @@ class TrackCollector:
         self.log.setLevel(log_level)
         self.tracks = []
         self.frames = []
-        self.out_time_in_ms = 10000
+        self.out_time_in_ms = 20000
 
     def add(self, proto):
         frame = proto.frame
