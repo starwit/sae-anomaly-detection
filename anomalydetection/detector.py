@@ -39,12 +39,9 @@ class Detector():
         self._device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
         self.model = model_architectures.get_model(self._parameters["model_architecture"], self._parameters["output_distribution"])
-        #ModelArchitecture = getattr(model_architectures, self._parameters["model_architecture"], None)
-        #if ModelArchitecture is None:
-         #   log.error(self._parameters["model_architecture"] + " is not a known model architecture.")
-          #  exit(1)
-
-        #self.model = ModelArchitecture().to(self._device)
+        if self.model is None:
+            log.error("Could not find a model of architecture '" + self._parameters["model_architecture"] + "' and output distribution '" + self._parameters["output_distribution"] + "'!")
+            exit(1)
 
         try:
             weights = torch.load(self._config.model.weights_path, map_location=torch.device(self._device))
@@ -90,7 +87,7 @@ class Detector():
             with SuppressOutput():      # suppress tqdm progress bar
                 diff = frames[-1].timestamp_utc_ms - frames[0].timestamp_utc_ms
                 frame_rate = (1000*(len(frames)-1))/diff
-                dataloader = makeTorchDataLoader(tracks, time_diff_prediction=2, frame_rate=frame_rate, pixel_per_axis=self._parameters["pixel_per_axis"])
+                dataloader = makeTorchDataLoader(tracks, time_diff_prediction=self._parameters["time_diff_prediction"], frame_rate=frame_rate, pixel_per_axis=self._parameters["pixel_per_axis"])
                     
                 if dataloader is not None:
                     outputs_with_stats = inference_with_stats(self.model, dataloader)
