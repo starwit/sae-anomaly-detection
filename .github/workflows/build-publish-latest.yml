@@ -54,4 +54,4 @@ jobs:
           docker buildx prune -af
           DOCKER_VERSION=$(cat pyproject.toml | grep "version" | cut -d'=' -f2 | xargs echo -n)
           docker rmi docker.internal.starwit-infra.de/sae-anomaly-detection:tmp
-          docker rmi docker.internal.starwit-infra.de/sae-anomaly-detection:$DOCKER_VERSION
+          docker rmi docker.internal.starwit-infra.de/sae-anomaly-detection:$DOCKER_VERSION-${{ github.run_number }}
