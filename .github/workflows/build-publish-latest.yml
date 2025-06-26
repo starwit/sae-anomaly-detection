@@ -38,7 +38,7 @@ jobs:
 
     - name: push docker versioned with build number
       run: |
-        DOCKER_VERSION=$(cat pyproject.toml | grep "version" | cut -d'=' -f2 | xargs echo -n)
+        DOCKER_VERSION=$(cat pyproject.toml | grep "version" | cut -d'=' -f2 | xargs echo -n)-${{ github.run_number }}
         docker tag docker.internal.starwit-infra.de/sae-anomaly-detection:tmp docker.internal.starwit-infra.de/sae-anomaly-detection:$DOCKER_VERSION
         docker push docker.internal.starwit-infra.de/sae-anomaly-detection:$DOCKER_VERSION
 
@@ -54,4 +54,4 @@ jobs:
           docker buildx prune -af
           DOCKER_VERSION=$(cat pyproject.toml | grep "version" | cut -d'=' -f2 | xargs echo -n)
           docker rmi docker.internal.starwit-infra.de/sae-anomaly-detection:tmp
-          docker rmi docker.internal.starwit-infra.de/sae-anomaly-detection:$DOCKER_VERSION
+          docker rmi docker.internal.starwit-infra.de/sae-anomaly-detection:$DOCKER_VERSION-${{ github.run_number }}
