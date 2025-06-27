@@ -3,6 +3,7 @@ fullnameOverride: "sae-anomaly-detection"
 
 image:
   repository: docker.internal.starwit-infra.de/sae-anomaly-detection
+  # tag: ""
 
 # This section is used verbatim as the settings.yaml for the anomaly-post-processing service (see settings.template.yaml for options)
 config:
