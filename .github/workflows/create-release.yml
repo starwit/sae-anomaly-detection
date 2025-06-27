@@ -74,7 +74,7 @@ jobs:
         VERSION: ${{ inputs.versionChoice }}
   
   build:
-    name: "Build and run docker image"
+    name: "Build, run and publish docker image"
     needs: createversion
     runs-on: [self-hosted, linux, X64]
 
@@ -87,13 +87,7 @@ jobs:
         GIT_CREDENTIALS: https://oauth2:${{ secrets.VISION_PIPELINE_READ_TOKEN }}@github.com/starwit/
       run: |
         docker build --secret id=GIT_CREDENTIALS -t docker.internal.starwit-infra.de/sae-anomaly-detection:tmp .
-
-  publish_docker:
-    name: "Publish docker"
-    needs: build
-    runs-on: [self-hosted, linux, X64]
-
-    steps:
+    
     - name: Login internal docker registry
       uses: docker/login-action@v3
       with:
@@ -107,19 +101,12 @@ jobs:
         docker tag docker.internal.starwit-infra.de/sae-anomaly-detection:tmp docker.internal.starwit-infra.de/sae-anomaly-detection:$DOCKER_VERSION
         docker push docker.internal.starwit-infra.de/sae-anomaly-detection:$DOCKER_VERSION
 
-  cleanup:
-    name: "Clean docker"
-    needs: [publish_docker, build ] 
-    runs-on: [self-hosted, linux, X64]
-    if: always()
-
-    steps:
-      - name: docker cleanup
-        run: |
-          docker buildx prune -af
-          DOCKER_VERSION=$(cat pyproject.toml | grep "version" | cut -d'=' -f2 | xargs echo -n)
-          docker rmi docker.internal.starwit-infra.de/sae-anomaly-detection:tmp
-          docker rmi docker.internal.starwit-infra.de/sae-anomaly-detection:$DOCKER_VERSION
+    - name: docker cleanup
+      run: |
+        docker buildx prune -af
+        DOCKER_VERSION=$(cat pyproject.toml | grep "version" | cut -d'=' -f2 | xargs echo -n)
+        docker rmi docker.internal.starwit-infra.de/sae-anomaly-detection:tmp
+        docker rmi docker.internal.starwit-infra.de/sae-anomaly-detection:$DOCKER_VERSION
 
   publish_helm:
     name: "Publish helm chart"

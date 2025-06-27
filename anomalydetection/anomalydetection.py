@@ -39,7 +39,7 @@ class AnomalyDetection:
         tracks, frames = self._timed_data_collector.get_latest_data()
         if len(tracks) == 0:
             return None
-        filtered_data = self._detector.filter_tracks(tracks)
+        filtered_data = self._detector.smooth_tracks(tracks)
         if len(filtered_data) == 0:
             return None
         anomaly_message = self._detector.examine_tracks_for_anomalies(filtered_data, frames)
