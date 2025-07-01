@@ -2,11 +2,12 @@ from collections import defaultdict
 import logging
 import os
 import sys
-import ast
 from typing import List
 import torch
 
 from movementpredictor import DataFilterer, makeTorchDataLoader, inference_with_stats, get_unlikely_trajectories, InferenceResult, model_architectures
+from movementpredictor.anomalydetection.anomaly_detector import plot_unlikely_samples
+from movementpredictor.data.datamanagement import get_downsampled_tensor_img
 from visionapi.anomaly_pb2 import AnomalyMessage, Point, Trajectory
 
 from anomalydetection.config import AnomalyDetectionConfig
@@ -38,46 +39,34 @@ class Detector():
         self._parameters = ModelInfoCollector(CONFIG).model_parameters
         self._device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
-        self.model = model_architectures.get_model(self._parameters["model_architecture"], self._parameters["output_distribution"])
-        if self.model is None:
-            log.error("Could not find a model of architecture '" + self._parameters["model_architecture"] + "' and output distribution '" + self._parameters["output_distribution"] + "'!")
-            exit(1)
+        self.model = model_architectures.get_model(architecture=self._parameters["model_architecture"], 
+                                                   output_prob=self._parameters["output_distribution"], 
+                                                   path_model=str(self._config.model.weights_path))
+        self.model.eval()
 
-        try:
-            weights = torch.load(self._config.model.weights_path, map_location=torch.device(self._device))
-        except:
-            log.error(f"Model weights not found at {self._config.model.weights_path}")
-            exit(1)
-        try:    
-            self.model.load_state_dict(weights)
-        except:
-            log.error(f"Model weights do not fit model architecture")
+        if self.model is None:
+            log.error("Could not find your model!")
             exit(1)
 
         log.info("starting anomaly detection with parameters:")
         for key in self._parameters.keys():
             log.info(key + ": " + str(self._parameters[key]))
       
-    def smooth_tracks(self, tracks):
+    def filter_tracks(self, tracks):
         if len(tracks) != 0:
-            #log.info(f"num single tracks before filtering: {len(tracks)}")
-            #if self._config.filtering:
-             #   with SuppressOutput():
-              #      tracks = DataFilterer().apply_filtering(tracks)
-               # num_tracks = 0 
-                #for tr in tracks.values():
-                 #   num_tracks += len(tr)
-                #log.info(f"num tracks after filtering: {num_tracks}, within {len(tracks)} trajectories")
-            #else:
-            with SuppressOutput():
-                tracks = DataFilterer().only_smoothing(tracks)
-            
-            num_tracks = 0
-            for tr in tracks.values():
-                num_tracks += len(tr)
-            log.info(f"Found {num_tracks} detections, within {len(tracks)} trajectories")
+            if self._config.filtering:
+                log.info(f"num single tracks before filtering: {len(tracks)}")
+                with SuppressOutput():
+                    tracks = DataFilterer().apply_filtering(tracks)
+                num_tracks = 0 
+                for tr in tracks.values():
+                    num_tracks += len(tr)
+                log.info(f"num tracks after filtering: {num_tracks}, within {len(tracks)} trajectories")
+            else:
+                with SuppressOutput():
+                    tracks = DataFilterer().only_smoothing(tracks)
+                log.info(f"TESTING WITHOUT FILTERING")
 
-            #log.info(f"TESTING WITHOUT FILTERING")
         return tracks
     
     def examine_tracks_for_anomalies(self, tracks, frames) -> AnomalyMessage:
@@ -93,8 +82,13 @@ class Detector():
                     outputs_with_stats = inference_with_stats(self.model, dataloader)
                     anomalies = get_unlikely_trajectories(outputs_with_stats, self._parameters["anomaly_threshold"] 
                                                         if self._config.model.anomaly_threshold_override is None else self._config.model.anomaly_threshold_override)
+
             if len(anomalies) != 0:
                 log.info("ANOMALY FOUND!\n")
+
+                if self._config.debug_plots:
+                    frame_img = get_downsampled_tensor_img(frames[0], self._parameters["pixel_per_axis"])
+                    plot_unlikely_samples(frame_img, dataloader, anomalies, "")
 
         return self._write_anomaly_message(anomalies, frames, tracks)
     
@@ -113,7 +107,12 @@ class Detector():
                 trajectory.CopyFrom(self._map_anomaly(anomalies, anomaly_trajectories[id]))
         
             if len(frames) > 0:
-                for frame in frames:
+                timestamps = [track.capture_ts for traj in anomaly_trajectories.values() for track in traj]
+                min_ts_ms, max_ts_ms = min(timestamps), max(timestamps)
+                frames_with_anomaly = [frame for frame in frames 
+                                       if frame.timestamp_utc_ms >= int(min_ts_ms) - 2000 and 
+                                       frame.timestamp_utc_ms <= int(max_ts_ms) + 2000]
+                for frame in frames_with_anomaly:
                     anomaly_frame = anomaly_msg.jpeg_frames.add()
                     anomaly_frame.frame_data_jpeg = frame.frame_data_jpeg
                     anomaly_frame.timestamp_utc_ms = frame.timestamp_utc_ms

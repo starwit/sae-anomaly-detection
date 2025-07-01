@@ -10,8 +10,9 @@ redisOut:
   stream_id: stream1
   stream_prefix: anomalydetection
 filtering: True
+debug_plots: False                      # True if you want to get a visualization of the models outputs for found anomalies, plots will be stored at anomlies/
 model:
-  anomaly_threshold_override:           # only for testing:  remove if not testing     
+  anomaly_threshold_override:           # only for testing: remove if not testing     
   parameters_path: model/parameters.json
   weights_path: model/model_weights.pth
 prometheus_port: 8000
