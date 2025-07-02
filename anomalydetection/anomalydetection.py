@@ -6,7 +6,7 @@ from visionapi.sae_pb2 import SaeMessage
 
 from anomalydetection.detector import Detector
 from anomalydetection.modelinfocollector import ModelInfoCollector
-from anomalydetection.trackcollector import TrackCollector
+from anomalydetection.trackcollector import TimedTrajectories
 
 from .config import AnomalyDetectionConfig
 
@@ -26,7 +26,7 @@ class AnomalyDetection:
         self._config = CONFIG
         self.model_info = ModelInfoCollector(CONFIG).model_info
         self._detector = Detector(self._config)
-        self._timed_data_collector = TrackCollector(self._config.log_level.value)
+        self._timed_data_collector = TimedTrajectories(self._config.log_level.value)   
  
     def __call__(self, input_proto) -> Any:
         return self.get(input_proto)
@@ -39,7 +39,7 @@ class AnomalyDetection:
         tracks, frames = self._timed_data_collector.get_latest_data()
         if len(tracks) == 0:
             return None
-        filtered_data = self._detector.smooth_tracks(tracks)
+        filtered_data = self._detector.filter_tracks(tracks)
         if len(filtered_data) == 0:
             return None
         anomaly_message = self._detector.examine_tracks_for_anomalies(filtered_data, frames)
