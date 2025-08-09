@@ -112,3 +112,23 @@ jobs:
           push: true
           tags: ${{ env.DOCKER_ORG }}/${{ env.IMAGE_NAME }}:${{ env.APP_VERSION }}
   
+  publish_helm:
+    name: "Publish helm chart"
+    needs: create-release
+    runs-on: [self-hosted, linux, X64]
+    
+    steps:
+    - name: get helm
+      uses: azure/setup-helm@v4
+
+    - name: run helm package
+      working-directory: deployment/helm
+      run: |
+        HELM_VERSION=$(cat ../../pyproject.toml | grep "version" | cut -d'=' -f2 | xargs echo -n)
+        helm package . --version $HELM_VERSION --app-version $HELM_VERSION
+
+    - name: run helm push
+      working-directory: deployment/helm
+      run: |
+        HELM_VERSION=$(cat ../../pyproject.toml | grep "version" | cut -d'=' -f2 | xargs echo -n)
+        curl -i --fail-with-body -u chartmuseum:${{ secrets.HELM_INTERNAL_PASSWORD }} --data-binary "@sae-anomaly-detection-$HELM_VERSION.tgz" https://helm.internal.starwit-infra.de/api/charts
