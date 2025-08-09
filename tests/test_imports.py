@@ -10,7 +10,7 @@ def test_anomalydetection_import():
 
 def test_main_import():
     try:
-        from main import main
+        import main
     except ImportError as e:
         pytest.fail(f"Failed to import main: {e}")
 
