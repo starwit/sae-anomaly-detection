@@ -24,6 +24,9 @@ matplotlib = "^3.10.1"
 scipy = "^1.15.2"
 tomlkit = "^0.13.2"
 
+[tool.poetry.group.dev.dependencies]
+pytest = "8.4.1"
+
 [build-system]
 requires = ["poetry-core"]
 build-backend = "poetry.core.masonry.api"
