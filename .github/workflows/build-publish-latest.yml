@@ -42,7 +42,7 @@ jobs:
         sbom: true
         provenance: mode=max
         push: true
-        secrets: https://oauth2:${{ secrets.GITHUB_TOKEN }}@github.com/starwit/
+        secrets: GIT_CREDENTIALS="https://oauth2:${{ secrets.GITHUB_TOKEN }}@github.com/starwit/"
         tags: ${{ env.DOCKER_ORG }}/${{ env.IMAGE_NAME }}:${{ env.DOCKER_VERSION }}-${{ github.run_number }}
 
 
