@@ -32,7 +32,7 @@ jobs:
       - name: Install project
         run: |
           git config --global credential.helper store
-          echo "https://oauth2:${GITHUB_TOKEN}@github.com" > /root/.git-credentials
+          echo "https://oauth2:${GITHUB_TOKEN}@github.com/starwit/" > /root/.git-credentials
           poetry config cache-dir /root/.cache/pypoetry
           bash -c "make test"
         env:
