@@ -36,4 +36,4 @@ jobs:
           git config --global credential.helper store
           bash -c "make test"
         env:
-          GIT_CREDENTIALS: https://oauth2:${{ secrets.VISION_PIPELINE_READ_TOKEN }}@github.com/starwit/
+          GIT_CREDENTIALS: https://oauth2:${{ secrets.GITHUB_TOKEN }}@github.com/starwit/
