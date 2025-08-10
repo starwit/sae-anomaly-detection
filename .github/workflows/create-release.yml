@@ -104,12 +104,15 @@ jobs:
       - name: Build and push
         uses: docker/build-push-action@v5
         if: env.APP_VERSION == env.LATEST_TAG
+        env:
+          GIT_CREDENTIALS: https://oauth2:${{ secrets.GITHUB_TOKEN }}@github.com/starwit/
         with:
           context: .
           file: ./Dockerfile
           sbom: true
           provenance: mode=max
           push: true
+          secrets: GIT_CREDENTIALS=${{ env.GIT_CREDENTIALS }}
           tags: ${{ env.DOCKER_ORG }}/${{ env.IMAGE_NAME }}:${{ env.APP_VERSION }}
   
   publish_helm:

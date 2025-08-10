@@ -21,6 +21,9 @@ RUN addgroup --system appgroup && adduser --system --ingroup appgroup appuser
 
 COPY --from=build --chown=appuser:appgroup /code /code
 WORKDIR /code
+RUN --mount=type=secret,id=GIT_CREDENTIALS,target=/root/.git-credentials \
+    git config --global credential.helper store && \
+    poetry install
 
 # Switch to non-root user
 USER appuser
