@@ -17,6 +17,8 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           POETRY_HTTP_BASIC_GITHUB_USERNAME: __token__
           POETRY_HTTP_BASIC_GITHUB_PASSWORD: ${{ secrets.GITHUB_TOKEN }}
+          GIT_CREDENTIALS: https://oauth2:${{ secrets.GITHUB_TOKEN }}@github.com/starwit/
+
     steps:
       #----------------------------------------------
       #       check-out repo and set-up python
