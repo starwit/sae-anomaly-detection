@@ -14,8 +14,8 @@ jobs:
         volumes:
             - /home/githubrunner/.cache/pypoetry:/root/.cache/pypoetry
         env:
-          GIT_CREDENTIALS: https://oauth2:${{ secrets.GITHUB_TOKEN }}@github.com/starwit/
-
+          POETRY_HTTP_BASIC_GITHUB_USERNAME: __token__
+          POETRY_HTTP_BASIC_GITHUB_PASSWORD: ${{ secrets.GITHUB_TOKEN }}
     steps:
       #----------------------------------------------
       #       check-out repo and set-up python
