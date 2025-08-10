@@ -21,12 +21,16 @@ RUN addgroup --system appgroup && adduser --system --ingroup appgroup appuser
 
 COPY --from=build --chown=appuser:appgroup /code /code
 WORKDIR /code
-RUN --mount=type=secret,id=GIT_CREDENTIALS,target=~/.git-credentials \
-    git config --global credential.helper store && \
-    poetry install
 
 # Switch to non-root user
 USER appuser
+
+RUN --mount=type=secret,id=GIT_AUTH_TOKEN \
+    GIT_TOKEN=$(cat /run/secrets/GIT_AUTH_TOKEN) && \
+    git config --global credential.helper store && \
+    echo "https://oauth2:${GIT_TOKEN}@github.com/starwit/" > ~/.git-credentials && \
+    poetry install --no-root && \
+    rm -f ~/.git-credentials
 
 ENV PATH="/code/.venv/bin:$PATH"
 CMD [ "python", "main.py" ]
