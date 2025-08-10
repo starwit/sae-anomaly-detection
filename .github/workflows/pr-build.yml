@@ -13,11 +13,6 @@ jobs:
         image: starwitorg/base-python-image:0.0.15
         volumes:
             - /home/githubrunner/.cache/pypoetry:/root/.cache/pypoetry
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          POETRY_HTTP_BASIC_GITHUB_USERNAME: __token__
-          POETRY_HTTP_BASIC_GITHUB_PASSWORD: ${{ secrets.GITHUB_TOKEN }}
-          GIT_CREDENTIALS: https://oauth2:${{ secrets.GITHUB_TOKEN }}@github.com/starwit/
 
     steps:
       #----------------------------------------------
@@ -25,6 +20,13 @@ jobs:
       #----------------------------------------------
       - name: Check out repository
         uses: actions/checkout@v4
+
+      - name: Setup git credentials
+        run: |
+          git config --global credential.helper store
+          echo "https://oauth2:${GITHUB_TOKEN}@github.com" > ~/.git-credentials
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Setup
         run: |
