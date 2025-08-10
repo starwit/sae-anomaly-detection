@@ -27,8 +27,3 @@ tomlkit = "^0.13.2"
 [build-system]
 requires = ["poetry-core"]
 build-backend = "poetry.core.masonry.api"
-
-[[tool.poetry.source]]
-name = "movementpredictor"
-url = "https://github.com/starwit/movement-predictor.git"
-default = false
