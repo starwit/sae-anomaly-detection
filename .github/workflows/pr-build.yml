@@ -14,6 +14,7 @@ jobs:
         volumes:
             - /home/githubrunner/.cache/pypoetry:/root/.cache/pypoetry
         env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           POETRY_HTTP_BASIC_GITHUB_USERNAME: __token__
           POETRY_HTTP_BASIC_GITHUB_PASSWORD: ${{ secrets.GITHUB_TOKEN }}
     steps:
