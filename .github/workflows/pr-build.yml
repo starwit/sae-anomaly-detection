@@ -31,9 +31,9 @@ jobs:
       #----------------------------------------------
       - name: Install project
         run: |
-          echo "${GIT_CREDENTIALS}" > /root/.git-credentials
+          echo "${GIT_CREDENTIALS}" > ~/.git-credentials
           poetry config cache-dir /root/.cache/pypoetry 
-          git config --global credential.helper store && \
+          git config --global credential.helper store
           bash -c "make test"
         env:
           GIT_CREDENTIALS: https://oauth2:${{ secrets.VISION_PIPELINE_READ_TOKEN }}@github.com/starwit/
