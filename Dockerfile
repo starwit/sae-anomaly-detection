@@ -26,11 +26,10 @@ WORKDIR /code
 USER appuser
 
 RUN --mount=type=secret,id=GIT_CREDENTIALS,env=GIT_CREDENTIALS \
-    chmod 600 ~/.git-credentials && \
-    echo "${GIT_CREDENTIALS}" > ~/.git-credentials \
+    echo "${GIT_CREDENTIALS}" > /root/.git-credentials \
     git config --global credential.helper store && \
     poetry install && \
-    rm -f ~/.git-credentials
+    rm -f /root/.git-credentials
 
 
 ENV PATH="/code/.venv/bin:$PATH"
