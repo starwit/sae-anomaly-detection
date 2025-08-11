@@ -25,10 +25,13 @@ WORKDIR /code
 # Switch to non-root user
 USER appuser
 
-RUN --mount=type=secret,id=GIT_CREDENTIALS,target=~/.git-credentials \
+RUN --mount=type=secret,id=GIT_CREDENTIALS,env=GIT_CREDENTIALS \
+    chmod 600 ~/.git-credentials && \
+    echo "${GIT_CREDENTIALS}" > ~/.git-credentials \
     git config --global credential.helper store && \
     poetry install && \
     rm -f ~/.git-credentials
+
 
 ENV PATH="/code/.venv/bin:$PATH"
 CMD [ "python", "main.py" ]
