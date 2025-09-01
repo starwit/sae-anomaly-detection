@@ -35,15 +35,17 @@ jobs:
         echo "DOCKER_VERSION=$(cat pyproject.toml | grep "version" | cut -d'=' -f2 | xargs echo -n)"  >> $GITHUB_ENV
 
     - name: Build and push
-      uses: docker/build-push-action@v6
+      uses: docker/build-push-action@v5
+      env:
+        GIT_CREDENTIALS: https://oauth2:${{ secrets.GITHUB_TOKEN }}@github.com/starwit/
       with:
         context: .
         file: ./Dockerfile
         sbom: true
         provenance: mode=max
         push: true
-        secrets: |
-          GIT_CREDENTIALS=https://oauth2:${{ secrets.GITHUB_TOKEN }}@github.com/starwit/
-        tags: ${{ env.DOCKER_ORG }}/${{ env.IMAGE_NAME }}:${{ env.DOCKER_VERSION }}-${{ github.run_number }}
+        secrets: GIT_CREDENTIALS=${{ env.GIT_CREDENTIALS }}
+        tags: ${{ env.DOCKER_ORG }}/${{ env.IMAGE_NAME }}:${{ env.DOCKER_VERSION }}
+
 
 
