@@ -14,6 +14,10 @@ class RedisConfig(BaseModel):
     stream_prefix: str = 'undefined'
 
 class ModelConfig(BaseModel):
+    start_training: bool = False
+    time_interval_train_data: float = 24
+    path_train_data: Path = Path("model/dataset")
+
     anomaly_threshold_override: Optional[float] = None
     parameters_path: Path = Path("model/parameters.json")
     weights_path: Path = Path("model/model_weights.pth")
@@ -33,3 +37,13 @@ class AnomalyDetectionConfig(BaseSettings):
     @classmethod
     def settings_customise_sources(cls, settings_cls, init_settings, env_settings, dotenv_settings, file_secret_settings):
         return (init_settings, env_settings, YamlConfigSettingsSource(settings_cls), file_secret_settings)
+    
+
+class ModelTrainingConfig(BaseModel):
+    model_name: str = "MobileNet_v3_asymmetric_prob"
+    model_architecture: str = "MobileNet_v3"
+    output_distribution: str = "asymmetric"
+    pixel_per_axis: int = 120
+    time_diff_prediction: float = 1.0
+    percentage_anomaly: float = 99.95
+    framerate: float = 10.0
