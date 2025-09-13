@@ -92,9 +92,8 @@ class AnomalyDetection:
     
     def _collect_and_train(self) -> None:
         """
-        If model_info.train is True, keep collecting data until the configured
-        hour interval elapses. Then trigger model training once and flip
-        model_info.train to False. Resets internal buffers afterward.
+        keep collecting data until the configured hour interval elapses. Then trigger model 
+        training once. Resets internal buffers and parameters afterward.
         """
         if not self._config.model.start_training:
             # if someone turned training off mid-way, reset state
@@ -128,8 +127,6 @@ class AnomalyDetection:
 
     def _trigger_training(self) -> None:
         """Runs the training hook with buffered data, then flips train=False."""
-        # Prepare a flat view for your trainer; adapt as needed
-
         try:
             self._train_anoamly_detector()
         finally:
@@ -137,18 +134,14 @@ class AnomalyDetection:
             self._config.model.start_training = False
             self._reset_training_state()
 
+
     def _reset_training_state(self) -> None:
         self._train_start_time = None
         self._train_buffer.clear()
 
     
     def _train_anoamly_detector(self) -> None:
-        """
-        Hook: start your actual model training here.
-        Replace with your real trainer (sync or async as fits your system).
-        Example:
-            self._detector.train(tracks=tracks, frames=frames, config=self._config)
-        """
+        """model training routine"""
         tracks = self._train_buffer
         logger.info(
             f"Preparing model training with {len(tracks)} tracks collected over {self._config.model.time_interval_train_data}.",
