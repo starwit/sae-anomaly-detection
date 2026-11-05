@@ -13,7 +13,7 @@ filtering: True
 debug_plots: False                      # True if you want to get a visualization of the models outputs for found anomalies, plots will be stored at anomlies/
 model:
   start_training: True
-  time_interval_train_data: 24          # in hours, how much data should be used for training  
+  time_interval_train_data: 24          # hours of recorded data (frame time, independent of playback speed)
   path_train_data: model/dataset     # path where collected training data is stored (for reproducibility)
   anomaly_threshold_override:           # only for testing: remove if not testing     
   parameters_path: model/parameters.json

@@ -1,6 +1,6 @@
 import json
 import logging
-from datetime import datetime, timedelta
+from datetime import datetime, timezone
 import os
 import random
 from typing import Any, Dict, List, Tuple, Optional
@@ -40,7 +40,12 @@ class AnomalyDetection:
         self._timed_data_collector = TimedTrajectories(self._config.log_level.value) 
 
         # ---- training control state ----
-        self._train_start_time: Optional[datetime] = None  
+        # frame time (ms) of the first frame of the training window
+        self._train_start_ts_ms: Optional[int] = None
+        # frame time (ms) of the previous frame, to accumulate forward progress only
+        self._train_last_ts_ms: Optional[int] = None
+        # collected frame time (ms), sum of forward steps
+        self._train_elapsed_ms: int = 0
         # store snapshots to later hand full interval to trainer
         self._train_buffer: List[TrackedObjectPosition] = []  
  
@@ -54,7 +59,7 @@ class AnomalyDetection:
 
         # collect data for eventual model training
         if self._config.model.start_training:
-            finished_training = self._collect_and_train()
+            finished_training = self._collect_and_train(sae_msg.frame.timestamp_utc_ms)
             if finished_training:
                 self._detector = Detector(self._config)
                 self.model_info = ModelInfoCollector(self._config).model_info
@@ -90,22 +95,22 @@ class AnomalyDetection:
         output_anomaly_msg.model_info.CopyFrom(self.model_info)
         return output_anomaly_msg.SerializeToString()
     
-    def _collect_and_train(self) -> None:
+    def _collect_and_train(self, frame_ts_ms: int) -> bool:
         """
-        keep collecting data until the configured hour interval elapses. Then trigger model 
+        keep collecting data until the configured hour interval of frame time elapses. Then trigger model 
         training once. Resets internal buffers and parameters afterward.
         """
-        if not self._config.model.start_training:
-            # if someone turned training off mid-way, reset state
-            if self._train_start_time is not None or self._train_buffer:
-                self._reset_training_state()
-            return False
-
         # initialize the window start when training turns on
-        if self._train_start_time is None:
-            self._train_start_time = datetime.utcnow()
-            logger.info(f"Started collecting data for model training at {self._train_start_time.isoformat()} UTC")
-            logger.info(f"Will trigger training in {self._config.model.time_interval_train_data} hours.")
+        if self._train_start_ts_ms is None:
+            self._train_start_ts_ms = frame_ts_ms
+            self._train_last_ts_ms = frame_ts_ms
+            logger.info(f"Started collecting data for model training at frame time {_format_frame_time(frame_ts_ms)} UTC")
+            logger.info(f"Will trigger training after {self._config.model.time_interval_train_data} hours of frame time.")
+
+        # only forward progress counts, backward jumps (e.g. a restarted recording) add nothing
+        if frame_ts_ms > self._train_last_ts_ms:
+            self._train_elapsed_ms += frame_ts_ms - self._train_last_ts_ms
+        self._train_last_ts_ms = frame_ts_ms
 
         # append current latest snapshot to the buffer
         tracks, _ = self._timed_data_collector.get_latest_data()
@@ -119,7 +124,7 @@ class AnomalyDetection:
             logger.error("Configured training interval is non-positive; aborting.")
             exit(1)
 
-        if datetime.utcnow() - self._train_start_time >= timedelta(hours=hours):
+        if self._train_elapsed_ms >= hours * 3_600_000:
             self._trigger_training()
             return True
         
@@ -136,7 +141,9 @@ class AnomalyDetection:
 
 
     def _reset_training_state(self) -> None:
-        self._train_start_time = None
+        self._train_start_ts_ms = None
+        self._train_last_ts_ms = None
+        self._train_elapsed_ms = 0
         self._train_buffer.clear()
 
     
@@ -144,7 +151,7 @@ class AnomalyDetection:
         """model training routine"""
         tracks = self._train_buffer
         logger.info(
-            f"Preparing model training with {len(tracks)} tracks collected over {self._config.model.time_interval_train_data}.",
+            f"Preparing model training with {len(tracks)} tracks collected over {self._config.model.time_interval_train_data} h of frame time.",
         )
         params = ModelTrainingConfig()
 
@@ -152,8 +159,14 @@ class AnomalyDetection:
         train, val = random_split_validation_data_from_train_data(filtered_data, val_frac=0.2)
 
         path_store_prefix = self._config.model.path_train_data
-        timestamp = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+        # name after the frame time the training window started at
+        timestamp = _format_frame_time(self._train_start_ts_ms)
         path_store = f"{path_store_prefix}_{timestamp}"
+        # do not overwrite data of a previous training on the same recording
+        suffix = 1
+        while os.path.exists(path_store):
+            path_store = f"{path_store_prefix}_{timestamp}_{suffix}"
+            suffix += 1
 
         logger.info(f"Store training data at {path_store}")
         store_data(train, path_store, time_diff_prediction=params.time_diff_prediction, folder="train", frame_rate=params.framerate)
@@ -190,6 +203,10 @@ class AnomalyDetection:
 
 
     
+
+def _format_frame_time(ts_ms: int) -> str:
+    return datetime.fromtimestamp(ts_ms / 1000, tz=timezone.utc).strftime('%Y-%m-%d %H:%M:%S')
+
 
 def random_split_validation_data_from_train_data(filtered_tracks: Dict[str, list[TrackedObjectPosition]], val_frac: float = 0.2) -> Tuple[List[TrackedObjectPosition], List[TrackedObjectPosition]]:
     """
