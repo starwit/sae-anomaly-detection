@@ -36,21 +36,26 @@ class Detector():
     def __init__(self, CONFIG: AnomalyDetectionConfig) -> None:
         log.setLevel(CONFIG.log_level.value)
         self._config = CONFIG
-        self._parameters = ModelInfoCollector(CONFIG).model_parameters
         self._device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
-        self.model = model_architectures.get_model(architecture=self._parameters["model_architecture"], 
-                                                   output_prob=self._parameters["output_distribution"], 
-                                                   path_model=str(self._config.model.weights_path))
-        self.model.eval()
-
-        if self.model is None:
-            log.error("Could not find your model!")
+        self.parameters = ModelInfoCollector(CONFIG).model_parameters if CONFIG.model.parameters_path.exists() else None
+        if self.parameters is None and self._config.model.start_training is False:
+            log.error("Could not find your model parameters! If you want to train a new model, set start_training to True in your config.")
             exit(1)
 
-        log.info("starting anomaly detection with parameters:")
-        for key in self._parameters.keys():
-            log.info(key + ": " + str(self._parameters[key]))
+        if not self._config.model.start_training:
+            self.model = model_architectures.get_model(architecture=self.parameters["model_architecture"], 
+                                                   output_prob=self.parameters["output_distribution"], 
+                                                   path_model=str(self._config.model.weights_path))
+            self.model.eval()
+
+            if self.model is None:
+                log.error("Could not find your model!")
+                exit(1)
+
+            log.info("starting anomaly detection with parameters:")
+            for key in self.parameters.keys():
+                log.info(key + ": " + str(self.parameters[key]))
       
     def filter_tracks(self, tracks):
         if len(tracks) != 0:
@@ -76,18 +81,19 @@ class Detector():
             with SuppressOutput():      # suppress tqdm progress bar
                 diff = frames[-1].timestamp_utc_ms - frames[0].timestamp_utc_ms
                 frame_rate = (1000*(len(frames)-1))/diff
-                dataloader = makeTorchDataLoader(tracks, time_diff_prediction=self._parameters["time_diff_prediction"], frame_rate=frame_rate, pixel_per_axis=self._parameters["pixel_per_axis"])
+                dataloader = makeTorchDataLoader(tracks, time_diff_prediction=self.parameters["time_diff_prediction"], frame_rate=frame_rate, pixel_per_axis=self.parameters["pixel_per_axis"])
                     
                 if dataloader is not None:
                     outputs_with_stats = inference_with_stats(self.model, dataloader)
-                    anomalies = get_unlikely_trajectories(outputs_with_stats, self._parameters["anomaly_threshold"] 
+                    anomalies = get_unlikely_trajectories(outputs_with_stats, self.parameters["anomaly_threshold"] 
                                                         if self._config.model.anomaly_threshold_override is None else self._config.model.anomaly_threshold_override)
 
             if len(anomalies) != 0:
                 log.info("ANOMALY FOUND!\n")
 
                 if self._config.debug_plots:
-                    frame_img = get_downsampled_tensor_img(frames[0], self._parameters["pixel_per_axis"])
+                    log.info(f"Plotting {len(anomalies)} anomalies")
+                    frame_img = get_downsampled_tensor_img(frames[0], self.parameters["pixel_per_axis"])
                     plot_unlikely_samples(frame_img, dataloader, anomalies, "")
 
         return self._write_anomaly_message(anomalies, frames, tracks)
