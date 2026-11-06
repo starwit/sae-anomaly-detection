@@ -67,7 +67,7 @@ jobs:
 
       - name: Create github release
         run: | 
-          APP_VERSION=$(cat pyproject.toml | grep "version" | cut -d'=' -f2 | xargs echo -n) 
+          APP_VERSION=$(cat pyproject.toml | grep -m1 "^version" | cut -d'=' -f2 | xargs echo -n) 
           gh release create $APP_VERSION -F README.md --title "${APP_VERSION}"
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -94,7 +94,7 @@ jobs:
           LATEST_TAG=$(git describe --tags `git rev-list --tags --max-count=1`)
           git checkout $LATEST_TAG
           echo "LATEST_TAG=${LATEST_TAG}" >> $GITHUB_ENV
-          APP_VERSION=$(cat pyproject.toml | grep "version" | cut -d'=' -f2 | xargs echo -n) 
+          APP_VERSION=$(cat pyproject.toml | grep -m1 "^version" | cut -d'=' -f2 | xargs echo -n) 
           echo "APP_VERSION=${APP_VERSION}" >> $GITHUB_ENV
 
       - name: Set up Docker Buildx
@@ -140,11 +140,11 @@ jobs:
     - name: run helm package
       working-directory: deployment/helm
       run: |
-        HELM_VERSION=$(cat ../../pyproject.toml | grep "version" | cut -d'=' -f2 | xargs echo -n)
+        HELM_VERSION=$(cat ../../pyproject.toml | grep -m1 "^version" | cut -d'=' -f2 | xargs echo -n)
         helm package . --version $HELM_VERSION --app-version $HELM_VERSION
 
     - name: run helm push
       working-directory: deployment/helm
       run: |
-        HELM_VERSION=$(cat ../../pyproject.toml | grep "version" | cut -d'=' -f2 | xargs echo -n)
+        HELM_VERSION=$(cat ../../pyproject.toml | grep -m1 "^version" | cut -d'=' -f2 | xargs echo -n)
         curl -i --fail-with-body -u chartmuseum:${{ secrets.HELM_INTERNAL_PASSWORD }} --data-binary "@sae-anomaly-detection-$HELM_VERSION.tgz" https://helm.internal.starwit-infra.de/api/charts

@@ -32,7 +32,7 @@ jobs:
 
     - name: Get Docker version
       run: |
-        APP_VERSION=$(cat pyproject.toml | grep "version" | cut -d'=' -f2 | xargs echo -n) 
+        APP_VERSION=$(cat pyproject.toml | grep -m1 "^version" | cut -d'=' -f2 | xargs echo -n) 
         echo "APP_VERSION=${APP_VERSION}" >> $GITHUB_ENV
         
     - name: Build and push
