@@ -1,35 +1,42 @@
-# This section is used verbatim as the settings.yaml for the anomaly-post-processing service (see settings.template.yaml for options)
-config:
+# extraImagePullSecrets:                    # The images are hosted in a private registry, i.e. you need to provide a pull secret, e.g. created with:
+#   - name: starwit-internal-registry       # kubectl create secret docker-registry starwit-internal-registry --docker-server=docker.internal.starwit-infra.de --docker-username=<user> --docker-password=<password>
+
+image:
+  repository: docker.internal.starwit-infra.de/sae-anomaly-detection
+  # tag: ""                                 # Defaults to the chart's appVersion
+
+useGpu: false                               # If true, runtimeClassName is set to "nvidia" and one nvidia.com/gpu is requested (speeds up training considerably)
+
+persistence:                                # Volume mounted at /code/model, holds collected training data and the trained model (all model paths below must point there)
+  enabled: true                             # If false, an emptyDir is used, i.e. the trained model is lost on pod restart
+  existingClaim: ""                         # Use an existing PVC instead of creating one
+  storageClass: ""                          # Empty means cluster default storage class
+  accessModes:
+    - ReadWriteOnce
+  size: 10Gi                                # Every training run stores its dataset next to the model, i.e. leave some headroom
+  annotations: {}                           # The chart-managed PVC is annotated with helm.sh/resource-policy=keep, i.e. it survives helm uninstall
+
+settingsYaml:                               # Everything below this is passed as content of the settings.yaml (notice snake_case vs camelCase)
+  log_level: INFO                           # Options: ERROR, WARNING, INFO, DEBUG
   redisIn:
-    stream_id: stream1
-    host: valkey-primary
+    host: sae-valkey                        # Valkey service of the SAE chart (<sae-release-name>-valkey)
     port: 6379
-    stream_prefix: objecttracker
+    stream_id: stream1
+    stream_prefix: objecttracker            # Read tracked objects from '{stream_prefix}:{stream_id}' (e.g. geomapper if positions should be included)
   redisOut:
-    stream_id: stream1
-    host: valkey-primary
+    host: sae-valkey
     port: 6379
-    stream_prefix: anomalydetection
-  filtering: True
+    stream_id: stream1
+    stream_prefix: anomalydetection         # Anomaly messages are written to '{stream_prefix}:{stream_id}'
+  filtering: true
   model:
+    start_training: false                   # If true and there is no model yet, data is collected for time_interval_train_data hours, then a model is trained and stored in the volume.
+                                            # No detection happens during collection. If a model already exists, training is skipped (delete parameters.json and model_weights.pth to retrain).
+    time_interval_train_data: 24            # In hours, how much data should be collected for training
+    path_train_data: model/dataset          # Prefix of the directory where collected training data is stored (a timestamp is appended)
     parameters_path: model/parameters.json
     weights_path: model/model_weights.pth
-    background_path: model/frame.pth
+    #anomaly_threshold_override: 0.5        # Only for testing
   prometheus_port: 8000
 
-# When set to true the runtimeClassName is set to "nvidia" and a GPU resource is requested
-useGpu: false
-
-# The tag of the model weights image to load
-weights:
-  imageTag: "tag"
-
-# If this is not set or empty, a default pull secret is created with the credentials from .pullSecret 
-# (and then used), otherwise it is assumed that the secrets exist
-existingPullSecret: ""
-
-# if .existingPullSecret is not set, this is used to create the default secret, otherwise it will be ignored
-pullSecret:
-  registry: docker.internal.starwit-infra.de
-  username: docker
-  password: "" # password to set
+resources: {}                               # Standard k8s container resources (nvidia.com/gpu limit is added automatically if useGpu is true)

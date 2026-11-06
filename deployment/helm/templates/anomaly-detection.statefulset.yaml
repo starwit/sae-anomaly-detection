@@ -1,73 +1,78 @@
 {{- $imageRepo := required "image repository for sae-anomaly-detection is required" .Values.image.repository }}
+{{- $imageTag := required "image tag for sae-anomaly-detection is required" (.Values.image.tag | default .Chart.AppVersion) }}
+{{- $redisIn := required "settingsYaml.redisIn is required" .Values.settingsYaml.redisIn }}
+{{- $resources := deepCopy (.Values.resources | default dict) }}
+{{- if .Values.useGpu }}
+{{- $_ := set $resources "limits" (merge (dict "nvidia.com/gpu" 1) ($resources.limits | default dict)) }}
+{{- end }}
 apiVersion: apps/v1
 kind: StatefulSet
 metadata:
-  name: {{ include "fullname" $ }}
+  name: {{ include "sae-anomaly-detection.fullname" . }}
   labels:
-    {{- include "labels" $ | nindent 4 }}
-    app.kubernetes.io/component: {{ include "fullname" $ }}
+    {{- include "sae-anomaly-detection.labels" . | nindent 4 }}
+    app.kubernetes.io/component: anomaly-detection
 spec:
   selector:
     matchLabels:
-      {{- include "selectorLabels" $ | nindent 6 }}
-      app.kubernetes.io/component: {{ include "fullname" $ }}
+      {{- include "sae-anomaly-detection.selectorLabels" . | nindent 6 }}
+      app.kubernetes.io/component: anomaly-detection
   template:
     metadata:
       annotations:
-        starwit.de/stage: sae-anomaly-detection
-        starwit.de/config-checksum: {{ include (print $.Template.BasePath "/anomaly-detection.configmap.yaml") $ | sha256sum }}
+        sae.starwit.de/stage: anomaly-detection
+        sae.starwit.de/config-checksum: {{ include (print .Template.BasePath "/anomaly-detection.configmap.yaml") . | sha256sum }}
       labels:
-        {{- include "selectorLabels" $ | nindent 8 }}
-        app.kubernetes.io/component: {{ include "fullname" $ }}
+        {{- include "sae-anomaly-detection.selectorLabels" . | nindent 8 }}
+        app.kubernetes.io/component: anomaly-detection
     spec:
-      serviceAccountName: {{ include "serviceAccountName" $ }}
+      serviceAccountName: {{ include "sae-anomaly-detection.serviceAccountName" . }}
       securityContext:
-        {{- toYaml $.Values.podSecurityContext | nindent 8 }}
+        {{- toYaml .Values.podSecurityContext | nindent 8 }}
+      {{- if .Values.useGpu }}
+      runtimeClassName: nvidia
+      {{- end }}
       initContainers:
-        - name: install-model-weights
-          image: docker.internal.starwit-infra.de/sae-anomaly-detection-weights:{{ .Values.weights.imageTag }}
-          volumeMounts:
-            - name: model-weights
-              mountPath: /weights_target
+        - name: wait-for-valkey
+          image: valkey/valkey:7.2.6-alpine
+          command: ["sh", "-c", "while ! redis-cli -h {{ $redisIn.host | default "localhost" }} -p {{ $redisIn.port | default 6379 }} ping ; do echo \"$(date -Iseconds) - still waiting for valkey\"; sleep 1; done"]
       containers:
-        - name: {{ include "fullname" $ }}
+        - name: anomaly-detection
           securityContext:
-            {{- toYaml $.Values.securityContext | nindent 12 }}
-          image: "{{ $imageRepo }}:{{ .Values.image.tag | default .Chart.AppVersion }}"
+            {{- toYaml .Values.securityContext | nindent 12 }}
+          image: "{{ $imageRepo }}:{{ $imageTag }}"
           imagePullPolicy: IfNotPresent
-          {{- if .Values.useGpu }}
           resources:
-            limits:
-              nvidia.com/gpu: 1
-          {{- end }}
+            {{- toYaml $resources | nindent 12 }}
           ports:
             - name: prometheus
-              containerPort: 8000
+              containerPort: {{ .Values.settingsYaml.prometheus_port | default 8000 }}
           volumeMounts:
             - name: config
               mountPath: /code/settings.yaml
               subPath: settings.yaml
-            - name: model-weights
+            - name: model
               mountPath: /code/model
-      {{- if .Values.useGpu }}
-      runtimeClassName: nvidia
-      {{- end }}
       volumes:
         - name: config
           configMap:
-            name: sae-anomaly-detection-config
-        - name: model-weights
+            name: {{ include "sae-anomaly-detection.fullname" . }}-config
+        - name: model
+          {{- if .Values.persistence.enabled }}
+          persistentVolumeClaim:
+            claimName: {{ include "sae-anomaly-detection.pvcName" . }}
+          {{- else }}
           emptyDir: {}
-      {{- with $.Values.nodeSelector }}
+          {{- end }}
+      {{- with .Values.nodeSelector }}
       nodeSelector:
         {{- toYaml . | nindent 8 }}
       {{- end }}
-      {{- with $.Values.affinity }}
+      {{- with .Values.affinity }}
       affinity:
         {{- toYaml . | nindent 8 }}
       {{- end }}
-      {{- with $.Values.tolerations }}
+      {{- with .Values.tolerations }}
       tolerations:
         {{- toYaml . | nindent 8 }}
       {{- end }}
----

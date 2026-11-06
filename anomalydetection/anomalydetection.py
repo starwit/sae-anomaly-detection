@@ -35,6 +35,10 @@ class AnomalyDetection:
     def __init__(self, CONFIG: AnomalyDetectionConfig) -> None:
         logger.setLevel(CONFIG.log_level.value)
         self._config = CONFIG
+        # do not retrain (and overwrite) an existing model, e.g. after a pod restart
+        if CONFIG.model.start_training and CONFIG.model.parameters_path.exists() and CONFIG.model.weights_path.exists():
+            logger.info(f"Found trained model at {CONFIG.model.weights_path}, skipping training. Delete model files to retrain.")
+            CONFIG.model.start_training = False
         self.model_info = ModelInfoCollector(CONFIG).model_info if not CONFIG.model.start_training else None
         self._detector = Detector(self._config)
         self._timed_data_collector = TimedTrajectories(self._config.log_level.value) 

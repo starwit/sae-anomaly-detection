@@ -12,7 +12,7 @@ redisOut:
 filtering: True
 debug_plots: False                      # True if you want to get a visualization of the models outputs for found anomalies, plots will be stored at anomlies/
 model:
-  start_training: True
+  start_training: True                  # collect data and train a new model; skipped if parameters_path and weights_path already exist (delete them to retrain)
   time_interval_train_data: 24          # in hours, how much data should be used for training  
   path_train_data: model/dataset     # path where collected training data is stored (for reproducibility)
   anomaly_threshold_override:           # only for testing: remove if not testing     

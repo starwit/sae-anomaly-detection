@@ -1,0 +1,25 @@
+{{- with .Values.persistence }}
+{{- if and .enabled (not .existingClaim) }}
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: {{ include "sae-anomaly-detection.pvcName" $ }}
+  labels:
+    {{- include "sae-anomaly-detection.labels" $ | nindent 4 }}
+    app.kubernetes.io/component: anomaly-detection
+  annotations:
+    helm.sh/resource-policy: keep
+    {{- with .annotations }}
+    {{- toYaml . | nindent 4 }}
+    {{- end }}
+spec:
+  accessModes:
+    {{- toYaml .accessModes | nindent 4 }}
+  {{- with .storageClass }}
+  storageClassName: {{ . | quote }}
+  {{- end }}
+  resources:
+    requests:
+      storage: {{ .size | quote }}
+{{- end }}
+{{- end }}

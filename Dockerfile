@@ -17,10 +17,13 @@ RUN apt update && apt install --no-install-recommends -y \
     libturbojpeg0
 
 # Create a non-root user and group
-RUN addgroup --system appgroup && adduser --system --ingroup appgroup appuser
+RUN addgroup --system --gid 1000 appgroup && adduser --system --uid 1000 --ingroup appgroup appuser
 
 COPY --from=build --chown=appuser:appgroup /code /code
 WORKDIR /code
+
+# Mount point for training data and model (e.g. PVC)
+RUN mkdir -p /code/model && chown appuser:appgroup /code/model
 
 # Switch to non-root user
 USER appuser

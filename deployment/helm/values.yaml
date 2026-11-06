@@ -1,42 +1,57 @@
-nameOverride: "sae-anomaly-detection"
-fullnameOverride: "sae-anomaly-detection"
+nameOverride: ""
+fullnameOverride: ""
+
+# extraImagePullSecrets:
+#   - name: extra-pull-secret
 
 image:
   repository: docker.internal.starwit-infra.de/sae-anomaly-detection
-  # tag: ""
-
-# This section is used verbatim as the settings.yaml for the anomaly-post-processing service (see settings.template.yaml for options)
-config:
-  redisIn:
-    stream_id: stream1
-    host: valkey-primary
-    port: 6379
-    stream_prefix: objecttracker
-  redisOut:
-    stream_id: stream1
-    host: valkey-primary
-    port: 6379
-    stream_prefix: anomalydetection
-  filtering: True
-  model:
-    parameters_path: model/parameters.json
-    weights_path: model/model_weights.pth
-    background_path: model/frame.pth
-  prometheus_port: 8000
+  # tag: ""                                 # defaults to the chart's appVersion
 
 # When set to true the runtimeClassName is set to "nvidia" and a GPU resource is requested
 useGpu: false
 
-# The tag of the model weights image to load
-weights:
-  imageTag: "tag"
+# Volume mounted at /code/model; holds collected training data and the trained model
+persistence:
+  enabled: true
+  existingClaim: ""
+  storageClass: ""
+  accessModes:
+    - ReadWriteOnce
+  size: 10Gi
+  annotations: {}
 
-# If this is not set or empty, a default pull secret is created with the credentials from .pullSecret 
-# (and then used), otherwise it is assumed that the secrets exist
-existingPullSecret: ""
+# Everything below this is passed as content of the settings.yaml (see settings.template.yaml for options)
+settingsYaml:
+  log_level: INFO
+  redisIn:
+    host: sae-valkey
+    port: 6379
+    stream_id: stream1
+    stream_prefix: objecttracker
+  redisOut:
+    host: sae-valkey
+    port: 6379
+    stream_id: stream1
+    stream_prefix: anomalydetection
+  filtering: true
+  model:
+    start_training: false
+    time_interval_train_data: 24
+    path_train_data: model/dataset
+    parameters_path: model/parameters.json
+    weights_path: model/model_weights.pth
+  prometheus_port: 8000
 
-# if .existingPullSecret is not set, this is used to create the default secret, otherwise it will be ignored
-pullSecret:
-  registry: docker.internal.starwit-infra.de
-  username: docker
-  password: "" # password to set
+resources: {}
+
+podSecurityContext:
+  fsGroup: 1000
+
+securityContext: {}
+
+nodeSelector: {}
+
+affinity: {}
+
+tolerations: []

@@ -1,7 +1,10 @@
 apiVersion: v1
 kind: ConfigMap
 metadata:
-  name: sae-anomaly-detection-config
+  name: {{ include "sae-anomaly-detection.fullname" . }}-config
+  labels:
+    {{- include "sae-anomaly-detection.labels" . | nindent 4 }}
+    app.kubernetes.io/component: anomaly-detection
 data:
   settings.yaml: |
-    {{- toYaml .Values.config | nindent 4 }}
+    {{- toYaml .Values.settingsYaml | nindent 4 }}
