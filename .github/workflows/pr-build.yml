@@ -5,6 +5,8 @@ on:
     branches: [ main ]
   workflow_dispatch:
 
+permissions: read-all
+
 jobs:
   pr-build-poetry:
     name: PR Build with Poetry
@@ -31,9 +33,11 @@ jobs:
       #----------------------------------------------
       - name: Install project
         run: |
-          echo "${GIT_CREDENTIALS}" > ~/.git-credentials
-          poetry config cache-dir /root/.cache/pypoetry 
-          git config --global credential.helper store
+          poetry config cache-dir /root/.cache/pypoetry
           bash -c "make test"
-        env:
-          GIT_CREDENTIALS: https://oauth2:${{ secrets.GITHUB_TOKEN }}@github.com/starwit/
+
+      # Container runs as root; hand files back to the runner user so later host jobs can clean the workspace
+      - name: Fix file ownership
+        if: always()
+        run: |
+          chown -R --reference="$GITHUB_WORKSPACE" "$GITHUB_WORKSPACE" /root/.cache/pypoetry

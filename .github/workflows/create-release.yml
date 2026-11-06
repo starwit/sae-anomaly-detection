@@ -72,6 +72,12 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
+      # Container runs as root; hand files back to the runner user so later host jobs can clean the workspace
+      - name: Fix file ownership
+        if: always()
+        run: |
+          chown -R --reference="$GITHUB_WORKSPACE" "$GITHUB_WORKSPACE" /root/.cache/pypoetry
+
   publish_docker:
     name: "Build and publish docker"
     needs: create-release
@@ -104,15 +110,12 @@ jobs:
       - name: Build and push
         uses: docker/build-push-action@v5
         if: env.APP_VERSION == env.LATEST_TAG
-        env:
-          GIT_CREDENTIALS: https://oauth2:${{ secrets.GITHUB_TOKEN }}@github.com/starwit/
         with:
           context: .
           file: ./Dockerfile
           sbom: true
           provenance: mode=max
           push: true
-          secrets: GIT_CREDENTIALS=${{ env.GIT_CREDENTIALS }}
           tags: ${{ env.DOCKER_ORG }}/${{ env.IMAGE_NAME }}:${{ env.APP_VERSION }}
   
   publish_helm:
@@ -121,6 +124,16 @@ jobs:
     runs-on: [self-hosted, linux, X64]
     
     steps:
+    - name: Checkout
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+
+    - name: Checkout latest release tag
+      run: |
+        LATEST_TAG=$(git describe --tags `git rev-list --tags --max-count=1`)
+        git checkout $LATEST_TAG
+
     - name: get helm
       uses: azure/setup-helm@v4
 

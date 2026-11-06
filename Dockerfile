@@ -4,7 +4,7 @@ FROM starwitorg/base-python-image:0.0.15 AS build
 COPY poetry.lock poetry.toml pyproject.toml /code/
 WORKDIR /code
 RUN poetry install
-    
+
 # Copy the rest of the project
 COPY . /code/
 
@@ -27,13 +27,6 @@ RUN mkdir -p /code/model && chown appuser:appgroup /code/model
 
 # Switch to non-root user
 USER appuser
-
-RUN --mount=type=secret,id=GIT_CREDENTIALS,env=GIT_CREDENTIALS \
-    echo "${GIT_CREDENTIALS}" > /root/.git-credentials \
-    git config --global credential.helper store && \
-    poetry install && \
-    rm -f /root/.git-credentials
-
 
 ENV PATH="/code/.venv/bin:$PATH"
 CMD [ "python", "main.py" ]
