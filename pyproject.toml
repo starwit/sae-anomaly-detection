@@ -10,7 +10,8 @@ readme = "README.md"
 [tool.poetry.dependencies]
 python = "^3.10"
 pydantic = "^2.10.6"
-torch = "^2.6.0"
+torch = { version = "^2.6.0", source = "pytorch-cpu" }
+torchvision = { version = "*", source = "pytorch-cpu" }
 numpy = "^1.26.4"
 visionapi = { git = "https://github.com/starwit/vision-api.git", subdirectory = "python/visionapi", tag = "3.2.0" }
 visionlib = { git = "https://github.com/starwit/vision-lib.git", subdirectory = "python", tag = "0.11.2" }
@@ -23,6 +24,11 @@ tqdm = "^4.66.4"
 matplotlib = "^3.10.1"
 scipy = "^1.15.2"
 tomlkit = "^0.13.2"
+
+[[tool.poetry.source]]
+name = "pytorch-cpu"
+url = "https://download.pytorch.org/whl/cpu"
+priority = "explicit"
 
 [tool.poetry.group.dev.dependencies]
 pytest = "8.4.1"
