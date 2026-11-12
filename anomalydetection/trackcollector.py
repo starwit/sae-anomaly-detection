@@ -1,7 +1,5 @@
 from dataclasses import dataclass
-import time
 import logging
-from datetime import datetime, timedelta
 from typing import List
 from visionapi.sae_pb2 import SaeMessage, VideoFrame
 from movementpredictor import TrackingDataManager, TrackedObjectPosition
@@ -32,15 +30,26 @@ class TimedTrajectories:
         # list of frame objects with their tracks, in chronological order
         self.frames_with_tracks: List[FrameWithTracks] = []   # [ [frame1, [tracks1]], ...]    
 
+        # all timing is based on frame timestamps (stream time), not wall-clock
         # milliseconds waiting intervall until self.out will be returnd when calling self.get_lastest_data
-        self.out_time = timedelta(milliseconds=10000)
-        # timestamp of last self.out return in milliseconds
-        self.last_out = datetime.min 
+        self.out_interval_ms = 10_000
+        # frame timestamp of last self.out return in milliseconds (None = never returned)
+        self.last_out_ms = None
+        # frame timestamp of the latest accepted message in milliseconds
+        self.latest_frame_ts_ms = None
 
-    def add(self, proto: SaeMessage):
-        """Call this for each incoming proto (with frame + raw detections)."""
-        current_time = time.time()
+    def add(self, proto: SaeMessage) -> bool:
+        """Call this for each incoming proto (with frame + raw detections).
+        Returns False if the message was ignored because its timestamp is not strictly increasing."""
         frame = proto.frame
+        if self.latest_frame_ts_ms is not None and frame.timestamp_utc_ms <= self.latest_frame_ts_ms:
+            self.log.warning(f"Ignoring message with non-monotonic timestamp {frame.timestamp_utc_ms} (latest seen: {self.latest_frame_ts_ms})")
+            return False
+        self.latest_frame_ts_ms = frame.timestamp_utc_ms
+
+        # use the frame's capture time (not wall-clock) so it is comparable to frame/track timestamps,
+        # regardless of pipeline latency
+        current_time = frame.timestamp_utc_ms / 1000
 
         # extract new tracks from this frame
         trackManager = TrackingDataManager()
@@ -63,6 +72,7 @@ class TimedTrajectories:
 
         # evict any trajectories that have timed out
         self._evict_expired(current_time)
+        return True
 
     def _evict_expired(self, current_time):
         """Move any timed-out or over-long trajectories to self.out, then clean up frames."""
@@ -80,17 +90,17 @@ class TimedTrajectories:
             self.timestamps.pop(tid)
 
         # Clean up old frames
-        self._cleanup_frames()
+        self._cleanup_frames(current_time)
 
-    def _cleanup_frames(self):
+    def _cleanup_frames(self, current_time):
         """
         Retain frames needed by active tracks and always keep the last 2 seconds of frames.
         """
 
         if not self.timestamps and not self.out:
             # no active tracks -> no frames needed, but keep last 2 seconds
-            now_ms = time.time() * 1_000
-            cutoff_ms = now_ms - 2_0000
+            now_ms = current_time * 1_000
+            cutoff_ms = now_ms - 2_000
         
         else:
             #Determine the earliest frame time required by active tracks - 2 seconds
@@ -119,10 +129,12 @@ class TimedTrajectories:
           - track_list: a flat list of all completed tracks (from self.out) and context vehicle tracks
           - frames:       the list of remaining frames at this point
         """
-        if datetime.now() - self.last_out < self.out_time:
+        if self.latest_frame_ts_ms is None:
             return [], []
-        
-        self.last_out = datetime.now()
+        if self.last_out_ms is not None and self.latest_frame_ts_ms - self.last_out_ms < self.out_interval_ms:
+            return [], []
+
+        self.last_out_ms = self.latest_frame_ts_ms
 
         if len(self.out) == 0:
             return [], []

@@ -32,6 +32,11 @@ This code employs pydantic-settings for configuration handling. On startup, the 
 
 The `settings.template.yaml` should always reflect a correct and fully fledged settings structure to use as a starting point for users.
 
+## Timing
+All time-based logic (trajectory timeouts and max length, frame retention, the 10s output interval, the training data collection window and the training data folder name) is based on the frame capture time (`frame.timestamp_utc_ms`) of incoming messages, not on wall-clock time. Processing latency therefore does not affect results, and replayed dumps (e.g. via sae-dump-player) behave the same as live streams.
+
+Timestamps must be strictly increasing. Messages with a timestamp lower than or equal to the latest one seen are ignored and a warning is logged. Note that after a backwards clock jump at the source, all messages are ignored until the timestamps catch up with the previous maximum.
+
 ## Github Workflows and Versioning
 
 The following Github Actions are available:

@@ -77,6 +77,10 @@ class Detector():
     def examine_tracks_for_anomalies(self, tracks, frames) -> AnomalyMessage:
         anomalies = []
 
+        if len(frames) < 2 or frames[-1].timestamp_utc_ms == frames[0].timestamp_utc_ms:
+            log.warning(f"Cannot determine frame rate from {len(frames)} frame(s), skipping anomaly detection for {len(tracks)} tracks")
+            return AnomalyMessage()
+
         if len(tracks) != 0:
             with SuppressOutput():      # suppress tqdm progress bar
                 diff = frames[-1].timestamp_utc_ms - frames[0].timestamp_utc_ms
