@@ -1,8 +1,11 @@
 from collections import defaultdict
+from functools import lru_cache
 import logging
 import os
 import sys
 from typing import List
+import cv2
+import numpy as np
 import torch
 
 from movementpredictor import DataFilterer, makeTorchDataLoader, inference_with_stats, get_unlikely_trajectories, InferenceResult, model_architectures
@@ -15,6 +18,16 @@ from anomalydetection.modelinfocollector import ModelInfoCollector
 
 
 log = logging.getLogger(__name__)
+
+PLACEHOLDER_GREY = 128
+PLACEHOLDER_DEFAULT_SHAPE = (1920, 1080)
+
+
+@lru_cache(maxsize=8)
+def _grey_jpeg(width: int, height: int) -> bytes:
+    """Uniform grey JPEG, used as frame background if the input message did not contain any frame data (useful for testing)."""
+    img = np.full((height, width, 3), PLACEHOLDER_GREY, dtype=np.uint8)
+    return cv2.imencode('.jpg', img)[1].tobytes()
 
 
 class SuppressOutput:
@@ -124,10 +137,16 @@ class Detector():
                                        frame.timestamp_utc_ms <= int(max_ts_ms) + 2000]
                 for frame in frames_with_anomaly:
                     anomaly_frame = anomaly_msg.jpeg_frames.add()
-                    anomaly_frame.frame_data_jpeg = frame.frame_data_jpeg
+                    anomaly_frame.frame_data_jpeg = frame.frame_data_jpeg if len(frame.frame_data_jpeg) > 0 else self._placeholder_jpeg(frame)
                     anomaly_frame.timestamp_utc_ms = frame.timestamp_utc_ms
         
         return anomaly_msg
+
+    def _placeholder_jpeg(self, frame) -> bytes:
+        width, height = frame.shape.width, frame.shape.height
+        if width <= 0 or height <= 0:
+            width, height = PLACEHOLDER_DEFAULT_SHAPE
+        return _grey_jpeg(width, height)
 
     def _map_anomaly(self, total_anomalies: List[InferenceResult], anomaly_trajectory) -> Trajectory:
         trajectory = Trajectory()
