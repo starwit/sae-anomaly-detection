@@ -1,6 +1,7 @@
 {{- $imageRepo := required "image repository for sae-anomaly-detection is required" .Values.image.repository }}
 {{- $imageTag := required "image tag for sae-anomaly-detection is required" (.Values.image.tag | default .Chart.AppVersion) }}
 {{- $redisIn := required "settingsYaml.redisIn is required" .Values.settingsYaml.redisIn }}
+{{- $redisOut := required "settingsYaml.redisOut is required" .Values.settingsYaml.redisOut }}
 {{- $resources := deepCopy (.Values.resources | default dict) }}
 {{- if .Values.useGpu }}
 {{- $_ := set $resources "limits" (merge (dict "nvidia.com/gpu" 1) ($resources.limits | default dict)) }}
@@ -33,9 +34,12 @@ spec:
       runtimeClassName: nvidia
       {{- end }}
       initContainers:
-        - name: wait-for-valkey
+        - name: wait-for-valkey-in
           image: valkey/valkey:7.2.6-alpine
           command: ["sh", "-c", "while ! redis-cli -h {{ $redisIn.host | default "localhost" }} -p {{ $redisIn.port | default 6379 }} ping ; do echo \"$(date -Iseconds) - still waiting for valkey\"; sleep 1; done"]
+        - name: wait-for-valkey-out
+          image: valkey/valkey:7.2.6-alpine
+          command: ["sh", "-c", "while ! redis-cli -h {{ $redisOut.host | default "localhost" }} -p {{ $redisOut.port | default 6379 }} ping ; do echo \"$(date -Iseconds) - still waiting for valkey\"; sleep 1; done"]
       containers:
         - name: anomaly-detection
           securityContext:
