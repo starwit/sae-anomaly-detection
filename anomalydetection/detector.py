@@ -1,4 +1,5 @@
-from collections import defaultdict
+from collections import Counter, defaultdict
+from datetime import datetime, timezone
 from functools import lru_cache
 import logging
 import os
@@ -9,7 +10,7 @@ import numpy as np
 import torch
 
 from movementpredictor import DataFilterer, makeTorchDataLoader, inference_with_stats, get_unlikely_trajectories, InferenceResult, model_architectures
-from movementpredictor.anomalydetection.anomaly_detector import plot_unlikely_samples
+from movementpredictor.anomalydetection.anomaly_detector import plot_unlikely_samples, calculate_trajectory_anomaly_scores
 from movementpredictor.data.datamanagement import get_downsampled_tensor_img
 from visionapi.anomaly_pb2 import AnomalyMessage, Point, Trajectory
 
@@ -30,6 +31,7 @@ def _grey_jpeg(width: int, height: int) -> bytes:
     return cv2.imencode('.jpg', img)[1].tobytes()
 
 
+# TODO: workaround for movementpredictor writing tqdm progress bars / print() output to stdout/stderr; remove once it reports via logging upstream
 class SuppressOutput:
     def __enter__(self):
         self._stdout = sys.stdout
@@ -72,18 +74,16 @@ class Detector():
       
     def filter_tracks(self, tracks):
         if len(tracks) != 0:
-            if self._config.filtering:
-                log.info(f"num single tracks before filtering: {len(tracks)}")
-                with SuppressOutput():
+            num_tracks_before = len(tracks)
+            # TODO: workaround for movementpredictor (tqdm progress bar in DataFilterer); remove once fixed upstream
+            with SuppressOutput():
+                if self._config.filtering:
                     tracks = DataFilterer().apply_filtering(tracks)
-                num_tracks = 0 
-                for tr in tracks.values():
-                    num_tracks += len(tr)
-                log.info(f"num tracks after filtering: {num_tracks}, within {len(tracks)} trajectories")
-            else:
-                with SuppressOutput():
+                else:
                     tracks = DataFilterer().only_smoothing(tracks)
-                log.info(f"TESTING WITHOUT FILTERING")
+            num_tracks = sum(len(tr) for tr in tracks.values())
+            log.debug(f"{'Filtered' if self._config.filtering else 'Smoothed (filtering disabled)'} tracks: "
+                      f"{num_tracks_before} -> {num_tracks} tracks in {len(tracks)} trajectories")
 
         return tracks
     
@@ -94,7 +94,10 @@ class Detector():
             log.warning(f"Cannot determine frame rate from {len(frames)} frame(s), skipping anomaly detection for {len(tracks)} tracks")
             return AnomalyMessage()
 
+        threshold = self.parameters["anomaly_threshold"] if self._config.model.anomaly_threshold_override is None else self._config.model.anomaly_threshold_override
+
         if len(tracks) != 0:
+            # TODO: workaround for movementpredictor (tqdm progress bar in inference_with_stats); remove once fixed upstream
             with SuppressOutput():      # suppress tqdm progress bar
                 diff = frames[-1].timestamp_utc_ms - frames[0].timestamp_utc_ms
                 frame_rate = (1000*(len(frames)-1))/diff
@@ -102,11 +105,10 @@ class Detector():
                     
                 if dataloader is not None:
                     outputs_with_stats = inference_with_stats(self.model, dataloader)
-                    anomalies = get_unlikely_trajectories(outputs_with_stats, self.parameters["anomaly_threshold"] 
-                                                        if self._config.model.anomaly_threshold_override is None else self._config.model.anomaly_threshold_override)
+                    anomalies = get_unlikely_trajectories(outputs_with_stats, threshold)
 
             if len(anomalies) != 0:
-                log.info("ANOMALY FOUND!\n")
+                log.info(self._describe_anomalies(anomalies, outputs_with_stats, tracks, threshold))
 
                 if self._config.debug_plots:
                     log.info(f"Plotting {len(anomalies)} anomalies")
@@ -115,6 +117,22 @@ class Detector():
 
         return self._write_anomaly_message(anomalies, frames, tracks)
     
+    def _describe_anomalies(self, anomalies: List[InferenceResult], samples_with_stats: List[InferenceResult], tracks, threshold: float) -> str:
+        """Compact one-line summary of all anomalous trajectories (for logging)"""
+        # TODO: workaround for movementpredictor; get_unlikely_trajectories() computes but does not return trajectory scores, so they are recomputed here
+        scores = dict(calculate_trajectory_anomaly_scores(samples_with_stats))
+        triggers_per_id = Counter(anomaly.obj_id for anomaly in anomalies)
+
+        descriptions = []
+        for obj_id, num_triggers in triggers_per_id.items():
+            trajectory = tracks[obj_id]
+            start = datetime.fromtimestamp(trajectory[0].capture_ts / 1000, tz=timezone.utc)
+            duration_s = (trajectory[-1].capture_ts - trajectory[0].capture_ts) / 1000
+            descriptions.append(f"id={obj_id} class={trajectory[0].class_id} score={scores.get(obj_id, float('nan')):.4f} "
+                                f"start={start:%Y-%m-%dT%H:%M:%S}Z duration={duration_s:.1f}s points={len(trajectory)} triggers={num_triggers}")
+
+        return f"Anomaly found: {len(triggers_per_id)} trajectories (threshold={threshold:.4f}): " + "; ".join(descriptions)
+
     def _write_anomaly_message(self, anomalies: List[InferenceResult], frames, tracks) -> AnomalyMessage:
         anomaly_msg = AnomalyMessage()
         

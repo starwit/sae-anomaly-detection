@@ -1,9 +1,11 @@
+from contextlib import redirect_stdout
 import json
 import logging
 from datetime import datetime, timedelta, timezone
 import os
 import random
 from typing import Any, Dict, List, Tuple, Optional
+from unittest.mock import patch
 
 from prometheus_client import Counter, Histogram, Summary
 from visionapi.sae_pb2 import SaeMessage
@@ -18,6 +20,7 @@ from movementpredictor.anomalydetection.anomaly_detector import calculate_trajec
 from movementpredictor import TrackedObjectPosition, makeTorchDataLoader
 
 from .config import AnomalyDetectionConfig, ModelTrainingConfig
+from .logutils import LogProgress, LogWriter
 
 
 logging.basicConfig(format='%(asctime)s %(name)-15s %(levelname)-8s %(processName)-10s %(message)s')
@@ -151,7 +154,7 @@ class AnomalyDetection:
         """model training routine"""
         tracks = self._train_buffer
         logger.info(
-            f"Preparing model training with {len(tracks)} tracks collected over {self._config.model.time_interval_train_data}.",
+            f"Preparing model training with {len(tracks)} tracks collected over {self._config.model.time_interval_train_data} hours.",
         )
         params = ModelTrainingConfig()
 
@@ -172,15 +175,22 @@ class AnomalyDetection:
         
         logger.info(f"Start training with {len(train)} training trajectories and {len(val)} validation trajectories")
 
-        model, _ = training.train_model(path_store, str(self._config.model.weights_path.parent), architecture=params.model_architecture, batch_interval=batch_interval,
-                            output_prob=params.output_distribution, pixel_per_axis=params.pixel_per_axis) 
+        # movementpredictor reports progress through tqdm and print(), which is unreadable in non-interactive consoles -> route it into the log
+        # TODO: workaround for movementpredictor; remove once it reports progress via logging upstream (also drop duplicated batch count via getTorchDataLoader)
+        train_progress = LogProgress(logger, "Training", total=len(getTorchDataLoader(ds)), pass_name="epoch")
+        with patch.object(training, "tqdm", train_progress), redirect_stdout(LogWriter(logger)):
+            model, _ = training.train_model(path_store, str(self._config.model.weights_path.parent), architecture=params.model_architecture, batch_interval=batch_interval,
+                                output_prob=params.output_distribution, pixel_per_axis=params.pixel_per_axis) 
         model.eval()
 
         logger.info("Inferencing to determine anomaly threshold")
         ds = getTorchDataSet(os.path.join(path_store, "test"), pixel_per_axis=params.pixel_per_axis)
         test = getTorchDataLoader(ds, shuffle=False)
-        samples_with_stats = inferencing.inference_with_stats(model, test)
+        # TODO: workaround for movementpredictor (tqdm progress bar); remove once it reports progress via logging upstream
+        with patch.object(inferencing, "tqdm", LogProgress(logger, "Inferencing", total=len(test))):
+            samples_with_stats = inferencing.inference_with_stats(model, test)
         score_thr = calculate_trajectory_threshold(samples_with_stats, percentage_p=params.percentage_anomaly)
+        logger.info(f"Determined anomaly threshold {score_thr:.4f}")
 
         # Save parameters
         json_dict = params.model_dump(mode="json")
