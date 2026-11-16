@@ -8,7 +8,7 @@ services:
       - anomaly-model:/weights_target
 
   sae-anomaly-detection:
-    image: ${PRIVATE_IMAGE_REGISTRY}/sae-anomaly-detection:${ANOMALY_DETECTION_VERSION}
+    image: ${IMAGE_REGISTRY}/sae-anomaly-detection:${ANOMALY_DETECTION_VERSION}
     volumes:
       - ./sae-anomaly-detection/sae-anomaly-detection.settings.yaml:/code/settings.yaml
       - anomaly-model:/code/model

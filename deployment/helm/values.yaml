@@ -1,11 +1,11 @@
-nameOverride: ""
+nameOverride: "sae-anomaly-detection"         # keeps resource names (incl. PVC) independent of the chart name
 fullnameOverride: ""
 
 # extraImagePullSecrets:
 #   - name: extra-pull-secret
 
 image:
-  repository: docker.internal.starwit-infra.de/sae-anomaly-detection
+  repository: starwitorg/sae-anomaly-detection
   # tag: ""                                 # defaults to the chart's appVersion
 
 # When set to true the runtimeClassName is set to "nvidia" and a GPU resource is requested

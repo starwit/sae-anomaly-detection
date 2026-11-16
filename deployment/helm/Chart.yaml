@@ -1,5 +1,5 @@
 apiVersion: v2
-name: sae-anomaly-detection
+name: sae-anomaly-detection-chart
 description: An instance of Anomaly Detection
 
 # A chart can be either an 'application' or a 'library' chart.

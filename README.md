@@ -42,8 +42,8 @@ Timestamps must be strictly increasing. Messages with a timestamp lower than or 
 The following Github Actions are available:
 
 * [PR build](.github/workflows/pr-build.yml): Builds docker image for each pull request to main branch. Inside the docker image, `poetry install` and `poetry run python test.py` are executed, to compile and test entire python code.
-* [Build and publish latest image](.github/workflows/build-publish-latest.yml): Manually executed action. Same like PR build. Additionally puts latest docker image to internal docker registry.
-* [Create release](.github/workflows/create-release.yml): Manually executed action. Creates a github release with tag, docker image in internal docker registry, helm chart in chartmuseum by using and incrementing the version in pyproject.toml. Poetry is updating to next version by using "patch, minor and major" keywords. If you want to change to non-incremental version, set version in directly in pyproject.toml and execute create release afterwards.
+* [Build and publish latest image](.github/workflows/build-publish-latest.yml): Manually executed action. Same like PR build. Additionally puts latest docker image to Docker Hub (`starwitorg`).
+* [Create release](.github/workflows/create-release.yml): Manually executed action. Creates a github release with tag, docker image and helm chart (`oci://registry-1.docker.io/starwitorg/sae-anomaly-detection-chart`) on Docker Hub by using and incrementing the version in pyproject.toml. Poetry is updating to next version by using "patch, minor and major" keywords. If you want to change to non-incremental version, set version in directly in pyproject.toml and execute create release afterwards.
 
 ## Dependabot Version Update
 

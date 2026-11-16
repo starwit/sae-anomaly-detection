@@ -2,10 +2,8 @@
 Deploys `sae-anomaly-detection` next to an existing [SAE](https://github.com/starwit/starwit-awareness-engine) installation (it reads from and writes to the SAE Valkey).
 
 # How-To Install
-- Images are hosted in the internal registry, i.e. create a pull secret first and reference it in `extraImagePullSecrets`:
-  `kubectl create secret docker-registry starwit-internal-registry --docker-server=docker.internal.starwit-infra.de --docker-username=<user> --docker-password=<password>`
 - Copy `customvalues.template.yaml` to `customvalues.yaml` and adapt it (esp. Valkey host and stream settings)
-- `helm install sae-anomaly-detection <chart> -f customvalues.yaml`
+- `helm install sae-anomaly-detection oci://registry-1.docker.io/starwitorg/sae-anomaly-detection-chart --version <version> -f customvalues.yaml`
 
 # Training and Persistence
 Training data and the model live on a PVC mounted at `/code/model` (see `persistence`). The chart-managed PVC is annotated with `helm.sh/resource-policy: keep`, i.e. it is not deleted on `helm uninstall`.
@@ -27,12 +25,23 @@ Training data and the model live on a PVC mounted at `/code/model` (see `persist
 
 # Changelog
 **Breaking changes (esp. with regard to config format) should only happen on major version bumps**
-## Next major version
-- Align chart with SAE helm chart conventions
-  - Breaking config change: `config` is now `settingsYaml`
-  - Breaking config change: the chart does not create a pull secret anymore (`existingPullSecret` and `pullSecret` are removed); use `extraImagePullSecrets` instead
-  - Breaking config change: the weights init container is removed (`weights` is removed); models are trained into the persistent volume
-  - Default Valkey host is now `sae-valkey` (Valkey service of an SAE release named `sae`)
-  - Pod annotations are now `sae.starwit.de/*`; a `wait-for-valkey` init container was added
-  - `resources`, `podSecurityContext` (default `fsGroup: 1000`), `securityContext`, `nodeSelector`, `affinity` and `tolerations` are configurable
-- Add PVC for training data and model (`persistence`)
+
+## 2.1.0
+- Chart and image are publicly available, no pull secret needed (`oci://registry-1.docker.io/starwitorg/sae-anomaly-detection-chart`)
+
+## 2.0.2
+- More readable logs, incl. details on detected anomalies
+- Works with input messages without frame data (grey placeholder image)
+
+## 2.0.1
+- Replaying dumps now works correctly (frame timestamps instead of wall-clock time)
+- Waits for the output Valkey to be reachable before starting (additional init container)
+
+## 2.0.0
+- Models can be trained directly in the component, no weights image needed anymore (`settingsYaml.model.start_training`)
+- Training data and model survive restarts and uninstalls (PVC, see `persistence`)
+- Breaking: config moved from `config` to `settingsYaml`
+- Breaking: pull secrets have to be provided externally (`extraImagePullSecrets`)
+- Breaking: resource names are derived from the release name
+- Works out of the box next to an SAE release named `sae` (Valkey host `sae-valkey`)
+- Resources, security contexts and scheduling are configurable

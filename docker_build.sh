@@ -1,3 +1,3 @@
 #!/bin/bash
 
-docker build -t docker.internal.starwit-infra.de/sae-anomaly-detection:$(poetry version --short) .
+docker build -t starwitorg/sae-anomaly-detection:local

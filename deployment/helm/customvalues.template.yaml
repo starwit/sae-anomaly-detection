@@ -1,8 +1,5 @@
-# extraImagePullSecrets:                    # The images are hosted in a private registry, i.e. you need to provide a pull secret, e.g. created with:
-#   - name: starwit-internal-registry       # kubectl create secret docker-registry starwit-internal-registry --docker-server=docker.internal.starwit-infra.de --docker-username=<user> --docker-password=<password>
-
 image:
-  repository: docker.internal.starwit-infra.de/sae-anomaly-detection
+  repository: starwitorg/sae-anomaly-detection
   # tag: ""                                 # Defaults to the chart's appVersion
 
 useGpu: false                               # If true, runtimeClassName is set to "nvidia" and one nvidia.com/gpu is requested (speeds up training considerably)
